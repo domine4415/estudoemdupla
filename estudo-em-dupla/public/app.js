@@ -2,6 +2,7 @@
 // Todas as informações trazidas do JSON são renderizadas como texto (nunca HTML externo).
 const $ = id => document.getElementById(id);
 let code=null,token=null,role=null,view=null,es=null,lastImported=null,toastTimer=null;
+let signedIn=false,authMode='login';
 function alertUser(text,error=false){const box=$('toast');box.textContent=text;box.className='toast'+(error?' error':'');clearTimeout(toastTimer);toastTimer=setTimeout(()=>box.classList.add('hidden'),4500);}
 function connectionHint(){
   if(location.protocol==='file:')return 'O arquivo HTML foi aberto diretamente. Inicie pelo INICIAR_WINDOWS.bat e use http://localhost:3000.';
@@ -27,7 +28,7 @@ async function request(endpoint,method='GET',body){
 }
 function credentials(){return role==='host'?{hostToken:token}:{token};}
 function roomLink(){return location.origin+'/?room='+encodeURIComponent(code);}
-function setSession(c,t,r){code=c;token=t;role=r;localStorage.setItem('dupla_'+code,JSON.stringify({token,role}));history.replaceState(null,'','/?room='+code);$('landing').classList.add('hidden');$('workspace').classList.remove('hidden');$('topRoom').classList.remove('hidden');$('roomCode').textContent=code;document.body.classList.toggle('guest',role==='guest');$('roomTitle').textContent=role==='host'?'Sala '+code:'Sala '+code;connect();refresh();}
+function setSession(c,t,r){if(!signedIn){showAuthMessage('Entre na conta antes de acessar a sala.',true);return;}code=c;token=t;role=r;localStorage.setItem('dupla_'+code,JSON.stringify({token,role}));localStorage.setItem('dupla_last_room',code);history.replaceState(null,'','/?room='+code);$('landing').classList.add('hidden');$('workspace').classList.remove('hidden');$('topRoom').classList.remove('hidden');$('roomCode').textContent=code;document.body.classList.toggle('guest',role==='guest');$('roomTitle').textContent=role==='host'?'Sala '+code:'Sala '+code;connect();refresh();}
 function connect(){if(es)es.close();es=new EventSource('/api/room/'+encodeURIComponent(code)+'/events?token='+encodeURIComponent(token));es.addEventListener('refresh',()=>refresh());es.onerror=()=>{};}
 let ongoing=null,refreshQueued=false;
 async function refresh(){
@@ -36,7 +37,7 @@ async function refresh(){
   return ongoing;
 }
 async function command(action,data={}){try{await request('/'+action,'POST',{...credentials(),...data});await refresh();}catch(e){alertUser(e.message,true);}}
-async function createRoom(){try{
+async function createRoom(){if(!signedIn)return;try{
   const name=$('hostName').value.trim()||'Você';
   let r;
   try{r=await fetch('/api/room',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name})});}
@@ -45,7 +46,7 @@ async function createRoom(){try{
   const v=await r.json();if(!r.ok)throw Error(v.error||'Erro ao criar sala.');
   setSession(v.code,v.token,'host');alertUser('Sala criada! Envie o link ao seu amigo.');
 }catch(e){alertUser(e.message,true);}}
-async function joinRoom(){try{
+async function joinRoom(){if(!signedIn)return;try{
   const c=$('joinCode').value.toUpperCase().replace(/[^A-Z0-9]/g,'').trim();
   if(c.length!==6)throw Error('Digite o código de 6 caracteres.');
   code=c;
@@ -234,7 +235,7 @@ $('editQuestion').addEventListener('click',showEdit);
 $('editForm').addEventListener('submit',saveEdit);
 $('closeDialog').addEventListener('click',()=>$('editDialog').close());
 $('exportJson').addEventListener('click',downloadNormalized);
-$('exitRoom').addEventListener('click',()=>{localStorage.removeItem('dupla_'+code);if(es)es.close();location.href='/';});
+$('exitRoom').addEventListener('click',()=>{localStorage.removeItem('dupla_'+code);localStorage.removeItem('dupla_last_room');if(es)es.close();location.href='/';});
 async function checkBackend(){
   const notice=$('serverNotice');
   try{
@@ -242,13 +243,94 @@ async function checkBackend(){
     const response=await fetch('/api/health',{cache:'no-store'});
     if(!response.ok || !(response.headers.get('content-type')||'').includes('application/json'))throw Error(connectionHint());
     const data=await response.json();if(data.status!=='ok')throw Error(connectionHint());
-    notice.classList.add('hidden');
+    notice.classList.toggle('hidden',data.storage!=='memory');
+    if(data.storage==='memory')notice.textContent='⚠ Questões ainda não estão sendo salvas no Supabase. Configure as variáveis SUPABASE_URL e SUPABASE_SECRET_KEY no Render.';
   }catch(e){notice.textContent='⚠ Problema de conexão: '+connectionHint();notice.classList.remove('hidden');}
 }
-(function boot(){
+async function initializeApp(){
   checkBackend();
   const search=new URLSearchParams(location.search), c=(search.get('room')||'').toUpperCase();
-  if(c){$('joinCode').value=c;const session=localStorage.getItem('dupla_'+c);
-    if(session){try{const s=JSON.parse(session);setSession(c,s.token,s.role);return;}catch{localStorage.removeItem('dupla_'+c);}}
+  if(!c) {
+    const last=localStorage.getItem('dupla_last_room');
+    if(last && localStorage.getItem('dupla_'+last)) {
+      $('resumeRoom').textContent='Retomar sala '+last;
+      $('resumeRoom').classList.remove('hidden');
+      $('resumeRoom').onclick=()=>{location.href='/?room='+encodeURIComponent(last);};
+    }
   }
-})();
+  if(c){
+    $('joinCode').value=c;
+    const session=localStorage.getItem('dupla_'+c);
+    if(session) {try{const s=JSON.parse(session);if(s.token){setSession(c,s.token,s.role);return;}}catch{localStorage.removeItem('dupla_'+c);}}
+    // Novo navegador, mesmo usuário: recuperar sala de forma autenticada.
+    try{const r=await fetch('/api/room/'+encodeURIComponent(c)+'/restore',{cache:'no-store'});
+      if(r.ok){const v=await r.json();setSession(c,v.token,v.role);return;}
+    }catch{}
+  }
+}
+function showAuthMessage(msg,error=false){const el=$('authMessage');el.textContent=msg;el.className='auth-message'+(error?' error':'');}
+function switchAuthMode(mode){
+  authMode=mode;
+  $('tabLogin').classList.toggle('active',mode==='login');
+  $('tabRegister').classList.toggle('active',mode==='register');
+  $('authHeading').textContent=mode==='login'?'Bem-vindo de volta!':'Crie sua conta';
+  $('authDescription').textContent=mode==='login'?'Entre com seu e-mail e sua senha para continuar.':'Cadastre-se para participar das salas de estudo.';
+  $('authSubmit').textContent=mode==='login'?'Entrar na minha conta →':'Criar minha conta →';
+  $('authPassword').autocomplete=mode==='login'?'current-password':'new-password';
+  $('authMessage').classList.add('hidden');
+}
+async function authFetch(endpoint,method='GET',body){
+  let res;
+  try{res=await fetch('/api/auth/'+endpoint,{method,headers:body?{'Content-Type':'application/json'}:{},body:body?JSON.stringify(body):undefined,credentials:'same-origin',cache:'no-store'});}
+  catch(e){throw networkError(e);}
+  const data=await res.json().catch(()=>({}));
+  if(!res.ok)throw Error(data.error||'Não foi possível autenticar.');
+  return data;
+}
+async function onAuthSubmit(e){
+  e.preventDefault();
+  const button=$('authSubmit'),email=$('authEmail').value.trim(),password=$('authPassword').value;
+  button.disabled=true;$('authMessage').classList.add('hidden');
+  try {
+    const result=await authFetch(authMode,'POST',{email,password});
+    if(result.confirmationRequired) {
+      showAuthMessage('Cadastro recebido! Confira seu e-mail (inclusive spam) para confirmar a conta e depois faça login.');
+      $('authPassword').value='';
+      return;
+    }
+    await verifyLogin();
+  }catch(error){showAuthMessage(error.message,true);}
+  finally{button.disabled=false;}
+}
+async function verifyLogin(){
+  const result=await authFetch('me');
+  if(!result.authenticated)throw Error('Não foi possível confirmar seu login.');
+  signedIn=true;
+  $('authGate').classList.add('hidden');$('landing').classList.remove('hidden');
+  $('accountBar').classList.remove('hidden');$('accountEmail').textContent=result.user.email||'Minha conta';
+  $('authPassword').value='';
+  await initializeApp();
+}
+async function boot(){
+  $('tabLogin').addEventListener('click',()=>switchAuthMode('login'));
+  $('tabRegister').addEventListener('click',()=>switchAuthMode('register'));
+  $('authForm').addEventListener('submit',onAuthSubmit);
+  $('logout').addEventListener('click',async()=>{
+    try {await authFetch('logout','POST',{});}catch(e){alertUser(e.message,true);return;}
+    if(es)es.close();
+    code=null;token=null;role=null;view=null;signedIn=false;
+    $('topRoom').classList.add('hidden');$('workspace').classList.add('hidden');$('landing').classList.add('hidden');
+    $('accountBar').classList.add('hidden');$('authGate').classList.remove('hidden');
+    history.replaceState(null,'','/');
+    // Remove tokens de sala do navegador ao sair da conta.
+    for(const key of Object.keys(localStorage))if(key.startsWith('dupla_'))localStorage.removeItem(key);
+    switchAuthMode('login');
+    alertUser('Você saiu da conta.');
+  });
+  try{
+    const r=await authFetch('me');
+    if(r.authenticated){await verifyLogin();}
+    else {$('authGate').classList.remove('hidden');}
+  }catch(e){showAuthMessage(e.message,true);}
+}
+boot();

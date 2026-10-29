@@ -11,10 +11,32 @@
 <body>
 <header class="topbar">
   <div class="brand"><span class="brand-mark">✦</span><span>ESTUDO<span class="brand-secondary"> EM DUPLA</span></span></div>
+  <div id="accountBar" class="account-bar hidden"><span id="accountEmail"></span><button id="logout" class="btn btn-small btn-soft">Sair da conta</button></div>
   <div id="topRoom" class="top-room hidden"><span class="live-dot"></span> SALA <strong id="roomCode"></strong><button id="copyLink" class="btn btn-small btn-soft">Copiar link</button></div>
 </header>
 <main>
-  <div id="landing" class="landing">
+  <section id="authGate" class="auth-layout">
+    <div class="auth-intro">
+      <div class="hero-eyebrow">ESTUDO EM DUPLA</div>
+      <h1>Seu espaço de <span>estudos.</span></h1>
+      <p>Entre na sua conta para importar questões, criar salas e estudar com seu amigo, em qualquer dispositivo.</p>
+      <div class="auth-benefits"><span>✓ Questões organizadas</span><span>✓ Salas sincronizadas</span><span>✓ Histórico salvo no Supabase</span></div>
+    </div>
+    <section class="panel auth-panel" aria-label="Acesso à conta">
+      <div class="auth-panel-header"><span class="auth-icon">✦</span><span>ÁREA DE ACESSO</span></div>
+      <h2 id="authHeading">Bem-vindo de volta!</h2>
+      <p id="authDescription">Entre com seu e-mail e sua senha para continuar.</p>
+      <div class="auth-switch" role="group" aria-label="Tipo de acesso"><button id="tabLogin" type="button" class="auth-tab active">Entrar</button><button id="tabRegister" type="button" class="auth-tab">Criar conta</button></div>
+      <form id="authForm">
+        <label for="authEmail">E-mail</label><input id="authEmail" name="email" type="email" autocomplete="email" placeholder="seuemail@exemplo.com" required />
+        <label for="authPassword">Senha</label><input id="authPassword" name="password" type="password" autocomplete="current-password" minlength="6" placeholder="Digite sua senha" required />
+        <button id="authSubmit" type="submit" class="btn btn-primary btn-full">Entrar na minha conta <span>→</span></button>
+      </form>
+      <div id="authMessage" class="auth-message hidden" role="status"></div>
+      <p class="auth-footnote">Seu amigo também precisa criar uma conta. O código da sala continua funcionando normalmente.</p>
+    </section>
+  </section>
+  <div id="landing" class="landing hidden">
     <div class="hero-eyebrow">ESTUDE PARA CONCURSOS COM UM AMIGO</div>
     <h1>Uma questão.<br /><span>Duas respostas.</span></h1>
     <p class="hero-desc">Importe seu arquivo JSON, organize as questões automaticamente e resolva em dupla, em tempo real.</p>
@@ -39,6 +61,7 @@
         <button id="joinRoom" class="btn btn-outline btn-full">Entrar na sala <span>→</span></button>
       </section>
     </div>
+    <div class="resume-panel"><button id="resumeRoom" class="btn btn-soft hidden">Retomar minha sala anterior</button></div>
   </div>
 
   <div id="workspace" class="workspace hidden">
