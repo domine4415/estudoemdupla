@@ -19,7 +19,7 @@
     <div class="auth-intro">
       <div class="hero-eyebrow">ESTUDO EM DUPLA</div>
       <h1>Seu espaço de <span>estudos.</span></h1>
-      <p>Entre na sua conta para importar questões, criar salas e estudar com seu amigo, em qualquer dispositivo.</p>
+      <p>Entre na sua conta para participar das salas de estudo. Somente o administrador pode criar salas e importar questões.</p>
       <div class="auth-benefits"><span>✓ Questões organizadas</span><span>✓ Salas sincronizadas</span><span>✓ Histórico salvo no Supabase</span></div>
     </div>
     <section class="panel auth-panel" aria-label="Acesso à conta">
@@ -33,24 +33,26 @@
         <button id="authSubmit" type="submit" class="btn btn-primary btn-full">Entrar na minha conta <span>→</span></button>
       </form>
       <div id="authMessage" class="auth-message hidden" role="status"></div>
-      <p class="auth-footnote">Seu amigo também precisa criar uma conta. O código da sala continua funcionando normalmente.</p>
+      <p class="auth-footnote">Cada participante cria sua conta. As salas abertas aparecem automaticamente após o login.</p>
     </section>
   </section>
   <div id="landing" class="landing hidden">
     <div class="hero-eyebrow">ESTUDE PARA CONCURSOS COM UM AMIGO</div>
     <h1>Uma questão.<br /><span>Duas respostas.</span></h1>
-    <p class="hero-desc">Importe seu arquivo JSON, organize as questões automaticamente e resolva em dupla, em tempo real.</p>
+    <p class="hero-desc" id="landingDescription">Escolha uma sala disponível e estude em dupla, em tempo real.</p>
     <p id="serverNotice" class="server-notice hidden" role="alert"></p>
     <div class="landing-panels">
-      <section class="panel landing-card">
+      <section id="adminCreateCard" class="panel landing-card hidden">
         <div class="card-icon">▣</div>
         <h2>Criar sala de estudos</h2>
         <p>Você controla as questões no computador. Seu amigo entra pelo celular.</p>
+        <label for="roomName">Nome da sala</label>
+        <input id="roomName" placeholder="Ex.: Direito Penal • IGEDUC" maxlength="70" />
         <label for="hostName">Seu nome</label>
-        <input id="hostName" placeholder="Ex.: Dom" maxlength="30" value="Eu" />
+        <input id="hostName" placeholder="Ex.: Dom" maxlength="30" value="Administrador" />
         <button id="createRoom" class="btn btn-primary btn-full">Criar sala <span>→</span></button>
       </section>
-      <section class="panel landing-card">
+      <section id="joinCard" class="panel landing-card hidden">
         <div class="card-icon">◎</div>
         <h2>Entrar com um código</h2>
         <p>Seu amigo enviou um link ou um código de sala? Entre por aqui.</p>
@@ -61,6 +63,12 @@
         <button id="joinRoom" class="btn btn-outline btn-full">Entrar na sala <span>→</span></button>
       </section>
     </div>
+    <section class="panel room-directory" aria-label="Salas abertas">
+      <div class="directory-heading"><div><div class="eyebrow">SALAS DE ESTUDO</div><h2>Salas abertas</h2><p>Escolha uma sala para entrar. Cada sala aceita um participante além do administrador.</p></div>
+        <button id="refreshRooms" class="btn btn-soft btn-small" type="button">Atualizar ↻</button></div>
+      <div id="roomsNotice" class="directory-notice" role="status">Procurando salas...</div>
+      <div id="roomsList" class="room-cards"></div>
+    </section>
     <div class="resume-panel"><button id="resumeRoom" class="btn btn-soft hidden">Retomar minha sala anterior</button></div>
   </div>
 
@@ -74,7 +82,7 @@
       </div>
       <div class="sidebar-list-top"><div class="eyebrow">QUESTÕES <span id="questionTotal">0</span></div><div class="muted tiny">Clique para navegar</div></div>
       <div id="questionList" class="question-list"><p class="empty-sidebar">Importe um JSON para começar.</p></div>
-      <div class="sidebar-footer"><button id="exitRoom" class="btn btn-ghost">Sair desta sala</button></div>
+      <div class="sidebar-footer"><button id="closeRoom" class="btn btn-outline btn-full host-only">Encerrar sala</button><button id="exitRoom" class="btn btn-ghost">Voltar às salas</button></div>
     </aside>
 
     <section class="content">

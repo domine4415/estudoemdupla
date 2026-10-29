@@ -2,7 +2,7 @@
 // Todas as informações trazidas do JSON são renderizadas como texto (nunca HTML externo).
 const $ = id => document.getElementById(id);
 let code=null,token=null,role=null,view=null,es=null,lastImported=null,toastTimer=null;
-let signedIn=false,authMode='login';
+let signedIn=false,isAdminAccount=false,authMode='login';
 function alertUser(text,error=false){const box=$('toast');box.textContent=text;box.className='toast'+(error?' error':'');clearTimeout(toastTimer);toastTimer=setTimeout(()=>box.classList.add('hidden'),4500);}
 function connectionHint(){
   if(location.protocol==='file:')return 'O arquivo HTML foi aberto diretamente. Inicie pelo INICIAR_WINDOWS.bat e use http://localhost:3000.';
@@ -37,10 +37,11 @@ async function refresh(){
   return ongoing;
 }
 async function command(action,data={}){try{await request('/'+action,'POST',{...credentials(),...data});await refresh();}catch(e){alertUser(e.message,true);}}
-async function createRoom(){if(!signedIn)return;try{
-  const name=$('hostName').value.trim()||'Você';
+async function createRoom(){if(!signedIn||!isAdminAccount)return;try{
+  const name=$('hostName').value.trim()||'Administrador';
+  const title=$('roomName').value.trim();
   let r;
-  try{r=await fetch('/api/room',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name})});}
+  try{r=await fetch('/api/room',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,title})});}
   catch(e){throw networkError(e);}
   if(!(r.headers.get('content-type')||'').includes('application/json'))throw Error('Não foi possível criar a sala: o site foi aberto sem o servidor Node.js. '+connectionHint());
   const v=await r.json();if(!r.ok)throw Error(v.error||'Erro ao criar sala.');
@@ -49,8 +50,11 @@ async function createRoom(){if(!signedIn)return;try{
 async function joinRoom(){if(!signedIn)return;try{
   const c=$('joinCode').value.toUpperCase().replace(/[^A-Z0-9]/g,'').trim();
   if(c.length!==6)throw Error('Digite o código de 6 caracteres.');
+  const previousCode=code;
   code=c;
-  const v=await request('/join','POST',{name:$('joinName').value.trim()||'Amigo'});
+  let v;
+  try{v=await request('/join','POST',{name:$('joinName').value.trim()||'Amigo'});}
+  catch(e){code=previousCode;throw e;}
   setSession(c,v.token,'guest');alertUser('Você entrou na sala!');
 }catch(e){alertUser(e.message,true);}}
 function clean(t){return String(t||'').replace(/\u00a0/g,' ').replace(/[\t ]+/g,' ').replace(/\n[ \t]*\n[ \t]*\n+/g,'\n\n').trim();}
@@ -128,6 +132,7 @@ async function importFile(file){
 }
 function div(className,text){const el=document.createElement('div');if(className)el.className=className;el.textContent=text;return el;}
 function render(q){
+  if(q.isOpen===false){leaveRoom('Esta sala foi encerrada pelo administrador.');return;}
   $('questionTotal').textContent=q.questionsCount;
   $('memberStatus').textContent=q.guestName?`${q.hostName} e ${q.guestName} conectados`:'Aguardando seu amigo entrar...';
   $('scoreHost').textContent=q.scores.host;$('scoreGuest').textContent=q.scores.guest;
@@ -214,13 +219,76 @@ async function saveEdit(e){e.preventDefault();
   await command('edit',{index:view.index,question});$('editDialog').close();
 }
 
+function leaveRoom(message=''){
+  if(es){es.close();es=null;}
+  if(code){localStorage.removeItem('dupla_'+code);}
+  localStorage.removeItem('dupla_last_room');
+  code=null;token=null;role=null;view=null;
+  $('topRoom').classList.add('hidden');
+  $('workspace').classList.add('hidden');$('landing').classList.remove('hidden');
+  document.body.classList.remove('guest');history.replaceState(null,'','/');
+  loadRooms();
+  if(message)alertUser(message);
+}
+function roomCard(room){
+  const item=document.createElement('div');item.className='directory-room';
+  const info=document.createElement('div');info.className='directory-info';
+  const title=document.createElement('strong');title.textContent=room.title||'Sala '+room.code;
+  const meta=document.createElement('small');
+  meta.textContent=`Código ${room.code} • ${room.hostName} • ${room.questionsCount} questão(ões)`;
+  info.append(title,meta);
+  const status=document.createElement('span');status.className='room-status '+(room.occupied?'busy':'free');
+  status.textContent=room.occupied?'Ocupada':'1 vaga disponível';
+  const action=document.createElement('button');action.type='button';action.className='btn btn-small '+(room.mine?'btn-soft':'btn-primary');
+  action.textContent=room.mine?'Continuar':room.occupied?'Lotada':'Entrar';
+  action.disabled=room.occupied&&!room.mine || (isAdminAccount&&!room.mine);
+  if(isAdminAccount&&!room.mine)action.textContent='Somente o criador';
+  action.onclick=async()=>{
+    if(action.disabled)return;
+    action.disabled=true;
+    try{
+      if(room.mine){
+        const result=await fetch('/api/room/'+encodeURIComponent(room.code)+'/restore',{cache:'no-store'});
+        const data=await result.json();if(!result.ok)throw Error(data.error||'Não foi possível abrir esta sala.');
+        setSession(data.code,data.token,data.role);
+      }else{
+        $('joinCode').value=room.code;
+        await joinRoom();
+      }
+    }catch(e){alertUser(e.message,true);}
+    finally{action.disabled=false;}
+  };
+  item.append(info,status,action);return item;
+}
+let roomsLoading=false;
+async function loadRooms(){
+  if(!signedIn||roomsLoading||!$('landing')||$('landing').classList.contains('hidden'))return;
+  roomsLoading=true;
+  const notice=$('roomsNotice');
+  try{
+    const r=await fetch('/api/rooms',{cache:'no-store',credentials:'same-origin'});
+    const data=await r.json();if(!r.ok)throw Error(data.error||'Não foi possível carregar salas.');
+    const list=$('roomsList');list.replaceChildren();
+    for(const room of data.rooms)list.append(roomCard(room));
+    notice.textContent=data.rooms.length?'':isAdminAccount?'Nenhuma sala aberta. Crie sua primeira sala acima.':'Nenhuma sala aberta no momento. Quando o administrador criar uma sala, ela aparecerá aqui.';
+    notice.classList.toggle('hidden',Boolean(data.rooms.length));
+  }catch(e){notice.textContent='Falha ao carregar as salas. Clique em Atualizar. '+e.message;notice.classList.remove('hidden');}
+  finally{roomsLoading=false;}
+}
+
 // Consulta periódica enquanto a sala está aberta. Além de tolerar quedas da conexão
 // de eventos, isso mantém atividade de entrada durante sessões no plano gratuito.
 setInterval(() => {
   if (code && token && document.visibilityState === 'visible') refresh();
 }, 60 * 1000);
+setInterval(()=>{if(signedIn&&!code&&document.visibilityState==='visible')loadRooms();},15000);
 
 $('createRoom').addEventListener('click',createRoom);$('joinRoom').addEventListener('click',joinRoom);
+$('refreshRooms').addEventListener('click',loadRooms);
+$('closeRoom').addEventListener('click',async()=>{
+  if(role!=='host'||!confirm('Encerrar esta sala? Ela deixará de aparecer para os participantes.'))return;
+  await command('close');
+});
 $('joinCode').addEventListener('keydown',e=>{if(e.key==='Enter')joinRoom();});
 $('jsonFile').addEventListener('change',e=>{if(e.target.files?.[0])importFile(e.target.files[0]);e.target.value='';});
 $('dropZone').addEventListener('dragover',e=>{e.preventDefault();$('dropZone').classList.add('dragging')});
@@ -235,7 +303,7 @@ $('editQuestion').addEventListener('click',showEdit);
 $('editForm').addEventListener('submit',saveEdit);
 $('closeDialog').addEventListener('click',()=>$('editDialog').close());
 $('exportJson').addEventListener('click',downloadNormalized);
-$('exitRoom').addEventListener('click',()=>{localStorage.removeItem('dupla_'+code);localStorage.removeItem('dupla_last_room');if(es)es.close();location.href='/';});
+$('exitRoom').addEventListener('click',()=>leaveRoom());
 async function checkBackend(){
   const notice=$('serverNotice');
   try{
@@ -249,6 +317,7 @@ async function checkBackend(){
 }
 async function initializeApp(){
   checkBackend();
+  loadRooms();
   const search=new URLSearchParams(location.search), c=(search.get('room')||'').toUpperCase();
   if(!c) {
     const last=localStorage.getItem('dupla_last_room');
@@ -305,9 +374,12 @@ async function onAuthSubmit(e){
 async function verifyLogin(){
   const result=await authFetch('me');
   if(!result.authenticated)throw Error('Não foi possível confirmar seu login.');
-  signedIn=true;
+  signedIn=true;isAdminAccount=Boolean(result.isAdmin);
   $('authGate').classList.add('hidden');$('landing').classList.remove('hidden');
-  $('accountBar').classList.remove('hidden');$('accountEmail').textContent=result.user.email||'Minha conta';
+  $('adminCreateCard').classList.toggle('hidden',!isAdminAccount);
+  $('joinCard').classList.toggle('hidden',isAdminAccount);
+  $('landingDescription').textContent=isAdminAccount?'Crie salas, importe questões e acompanhe as respostas em tempo real.':'Escolha uma sala aberta e responda às questões com o administrador.';
+  $('accountBar').classList.remove('hidden');$('accountEmail').textContent=(isAdminAccount?'ADMIN • ':'')+(result.user.email||'Minha conta');
   $('authPassword').value='';
   await initializeApp();
 }
@@ -318,7 +390,7 @@ async function boot(){
   $('logout').addEventListener('click',async()=>{
     try {await authFetch('logout','POST',{});}catch(e){alertUser(e.message,true);return;}
     if(es)es.close();
-    code=null;token=null;role=null;view=null;signedIn=false;
+    code=null;token=null;role=null;view=null;signedIn=false;isAdminAccount=false;
     $('topRoom').classList.add('hidden');$('workspace').classList.add('hidden');$('landing').classList.add('hidden');
     $('accountBar').classList.add('hidden');$('authGate').classList.remove('hidden');
     history.replaceState(null,'','/');

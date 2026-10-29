@@ -12,6 +12,13 @@ const SUPABASE_SECRET_KEY = process.env.SUPABASE_SECRET_KEY || '';
 const storageEnabled = Boolean(SUPABASE_URL && SUPABASE_SECRET_KEY);
 const SUPABASE_PUBLISHABLE_KEY = process.env.SUPABASE_PUBLISHABLE_KEY || '';
 const authEnabled = Boolean(SUPABASE_URL && SUPABASE_PUBLISHABLE_KEY);
+// O admin é validado NO SERVIDOR pelo usuário autenticado e e-mail confirmado.
+// ADMIN_USER_ID (opcional) permite travar a permissão também no UUID da conta.
+const ADMIN_EMAIL = (process.env.ADMIN_EMAIL || 'domineoliveira.mcz@gmail.com').trim().toLowerCase();
+const ADMIN_USER_ID = (process.env.ADMIN_USER_ID || '').trim();
+function isAdmin(user) {
+  return Boolean(user && user.emailConfirmed && user.email.toLowerCase()===ADMIN_EMAIL && (!ADMIN_USER_ID || user.id===ADMIN_USER_ID));
+}
 const saveQueues = new Map();
 const roomLoads = new Map();
 
@@ -39,7 +46,9 @@ function storedState(room) {
   return {
     code:room.code,hostToken:room.hostToken,hostName:room.hostName,hostUserId:room.hostUserId||null,
     guest:room.guest,questions:room.questions,index:room.index,
-    votes:room.votes,touched:room.touched
+    votes:room.votes,touched:room.touched,
+    title:room.title||'',isOpen:room.isOpen!==false,
+    questionsCount:room.questions.length
   };
 }
 async function persistRoom(room) {
@@ -67,12 +76,44 @@ async function loadRoom(code) {
     if (!rows.length) return null;
     const state = rows[0].state;
     if (!state || state.code!==code || !Array.isArray(state.questions)) throw new Error('Dados inválidos de sala no banco.');
-    const restored = {...state,clients:new Set(),touched:Date.now()};
+    const restored = {...state,isOpen:state.isOpen!==false,clients:new Set(),touched:Date.now()};
     rooms.set(code,restored);
     return restored;
   })();
   roomLoads.set(code,load);
   try{return await load;}finally{if(roomLoads.get(code)===load)roomLoads.delete(code);}
+}
+
+// Lista pública apenas para usuários LOGADOS, sem enunciados e sem tokens.
+// A projeção JSONB evita transferir os grandes arquivos de questões para a lista.
+async function listRooms(user) {
+  let entries=[];
+  if(storageEnabled){
+    const select='code,updated_at,host_name:state->>hostName,host_user_id:state->>hostUserId,'+
+      'guest_name:state->guest->>name,guest_user_id:state->guest->>userId,'+
+      'title:state->>title,is_open:state->>isOpen,question_count:state->>questionsCount';
+    const endpoint='dupla_rooms?select='+encodeURIComponent(select)+'&order=updated_at.desc&limit=100';
+    const response=await databaseRequest(endpoint);
+    entries=(await response.json()).map(x=>({
+      code:x.code,hostName:x.host_name,title:x.title,
+      hostUserId:x.host_user_id,guestName:x.guest_name,guestUserId:x.guest_user_id,
+      isOpen:x.is_open!=='false',questionsCount:Number(x.question_count)||0,updatedAt:x.updated_at
+    }));
+  } else {
+    entries=Array.from(rooms.values()).map(r=>({
+      code:r.code,hostName:r.hostName,title:r.title,hostUserId:r.hostUserId,
+      guestName:r.guest?.name||null,guestUserId:r.guest?.userId||null,
+      isOpen:r.isOpen!==false,questionsCount:r.questions.length,updatedAt:new Date(r.touched).toISOString()
+    })).sort((a,b)=>b.updatedAt.localeCompare(a.updatedAt));
+  }
+  return entries.filter(r=>r.isOpen).map(r=>({
+    code:r.code, title:safeText(r.title,70)||'Sala '+r.code,
+    hostName:safeText(r.hostName,30)||'Administrador',
+    questionsCount:r.questionsCount, occupied:Boolean(r.guestName),
+    guestName:r.guestName?safeText(r.guestName,30):null,
+    mine:r.hostUserId===user.id||r.guestUserId===user.id,
+    updatedAt:r.updatedAt
+  }));
 }
 
 // Supabase Auth (email e senha). Cookies HttpOnly, SameSite=Lax; nenhuma chave
@@ -126,7 +167,7 @@ async function currentUser(req,res) {
   const access=cookieValue(req,COOKIE_ACCESS);
   if(access) {
     const check=await supabaseAuth('user','GET',null,access);
-    if(check.ok&&check.data?.id)return {id:check.data.id,email:check.data.email||''};
+    if(check.ok&&check.data?.id)return {id:check.data.id,email:check.data.email||'',emailConfirmed:!!check.data.email_confirmed_at};
     if(check.status>=500)throw Object.assign(new Error('Não foi possível validar o login no Supabase.'),{status:502});
   }
   const refresh=cookieValue(req,COOKIE_REFRESH);
@@ -135,7 +176,7 @@ async function currentUser(req,res) {
     if(result.ok && result.data?.access_token) {
       writeAuthCookies(req,res,result.data);
       const verified=await supabaseAuth('user','GET',null,result.data.access_token);
-      if(verified.ok&&verified.data?.id)return {id:verified.data.id,email:verified.data.email||''};
+      if(verified.ok&&verified.data?.id)return {id:verified.data.id,email:verified.data.email||'',emailConfirmed:!!verified.data.email_confirmed_at};
     }
     if(result.status>=500)throw Object.assign(new Error('Não foi possível renovar o login no Supabase.'),{status:502});
     clearAuthCookies(req,res);
@@ -159,7 +200,7 @@ async function handleAuth(req,res,url) {
   const action=url.pathname.slice('/api/auth/'.length);
   if(action==='me'&&req.method==='GET') {
     const user=await currentUser(req,res);
-    send(res,200,{authenticated:!!user,user:user||null});return;
+    send(res,200,{authenticated:!!user,user:user?{id:user.id,email:user.email}:null,isAdmin:isAdmin(user)});return;
   }
   if(req.method!=='POST'){err(res,404,'Ação não encontrada.');return;}
   if(action==='logout') {
@@ -246,13 +287,7 @@ function auth(room, token, userId) {
   // Login vinculado ao criador e ao convidado. A senha da sala sozinha não basta.
   if (room.hostUserId === userId) return 'host';
   if (room.guest?.userId === userId) return 'guest';
-  // Salas antigas, criadas antes desta atualização, podem ser associadas
-  // ao primeiro usuário logado que comprovar possuir o token original.
-  if (token && token === room.hostToken && !room.hostUserId) {
-    room.hostUserId=userId;
-    persistRoom(room).catch(error=>console.error('Falha ao associar sala antiga:',error.message));
-    return 'host';
-  }
+  // A administração de salas antigas não pode ser reivindicada só com token.
   if (token && room.guest && token === room.guest.token && !room.guest.userId) {
     room.guest.userId=userId;
     persistRoom(room).catch(error=>console.error('Falha ao associar convidado antigo:',error.message));
@@ -278,7 +313,7 @@ function sanitizedState(r, role) {
   }
   return {
     code:r.code, role, hostName:r.hostName, guestName:r.guest?.name||null,
-    index:r.index, questionsCount:r.questions.length,
+    index:r.index, questionsCount:r.questions.length, isOpen:r.isOpen!==false, title:r.title||'',
     questions:role==='host'? r.questions.map(({id,originalId,subject,exam,board,year,link,needsReview,statement,alternatives,type,correct},i)=>({id,originalId,subject,exam,board,year,link,needsReview,statement,alternatives,type,correct,number:i+1})) : undefined,
     question:q ? {...q,correct: revealed?q.correct:null}:null,
     hostCorrect:role==='host'&&q ? q.correct : undefined,
@@ -298,16 +333,21 @@ async function findRoom(code,res) {
   if(!r) {err(res,404,'Sala não encontrada ou expirada.'); return null;}
   return r;
 }
-function requireHost(r,body,res,role) {
-  if(role!=='host'||body.hostToken!==r.hostToken) {err(res,403,'Somente o criador da sala pode fazer isso.');return false;}
+function requireHost(r,body,res,role,user) {
+  if(!isAdmin(user)||role!=='host'||body.hostToken!==r.hostToken) {err(res,403,'Somente o criador da sala pode fazer isso.');return false;}
   return true;
 }
 async function handleApi(req,res,url,user) {
   const segments=url.pathname.split('/').filter(Boolean);
+  if(segments[1]==='rooms'&&segments.length===2&&req.method==='GET') {
+    send(res,200,{rooms:await listRooms(user)});return;
+  }
   if(segments[1]==='room' && segments.length===2 && req.method==='POST') {
+    if(!isAdmin(user)){err(res,403,'Somente o administrador pode criar salas.');return;}
     const body=await parseJson(req);
     const code=makeCode(), hostToken=id();
-    const room={code,hostToken,hostUserId:user.id,hostName:safeText(body.name,30)||'Você', guest:null, questions:[],index:0,votes:{},clients:new Set(),touched:Date.now()};
+    const room={code,hostToken,hostUserId:user.id,hostName:safeText(body.name,30)||'Administrador',
+      title:safeText(body.title,70),isOpen:true,guest:null,questions:[],index:0,votes:{},clients:new Set(),touched:Date.now()};
     await persistRoom(room);
     rooms.set(code,room); send(res,201,{code,token:hostToken}); return;
   }
@@ -334,6 +374,7 @@ async function handleApi(req,res,url,user) {
   }
   if(action==='join'&&req.method==='POST') {
     const body=await parseJson(req);
+    if(room.isOpen===false){err(res,409,'Esta sala foi encerrada pelo administrador.');return;}
     if(room.hostUserId===user.id) {err(res,409,'Você já é o criador desta sala.');return;}
     if(room.guest) {
       if(room.guest.userId===user.id) {send(res,200,{code:room.code,token:room.guest.token});return;}
@@ -346,8 +387,14 @@ async function handleApi(req,res,url,user) {
   const body=await parseJson(req);
   const role=auth(room,body.token||body.hostToken,user.id);
   if(!role) {err(res,401,'Credencial inválida.');return;}
+  if(action==='close'&&req.method==='POST') {
+    if(!requireHost(room,body,res,role,user))return;
+    room.isOpen=false;
+    await persistRoom(room);notify(room);send(res,200,{ok:true});return;
+  }
+  if(room.isOpen===false){err(res,409,'Esta sala foi encerrada.');return;}
   if(action==='import'&&req.method==='POST') {
-    if(!requireHost(room,body,res,role))return;
+    if(!requireHost(room,body,res,role,user))return;
     if(!Array.isArray(body.questions)||body.questions.length===0||body.questions.length>MAX_QUESTIONS) {err(res,400,`Envie entre 1 e ${MAX_QUESTIONS} questões.`);return;}
     const cleaned=body.questions.map(normalizeQuestion);
     if(cleaned.some(x=>!x)) {err(res,400,'Há questão sem enunciado.');return;}
@@ -366,7 +413,7 @@ async function handleApi(req,res,url,user) {
     if(vote.host&&vote.guest) vote.revealed=true;
     await persistRoom(room);notify(room);send(res,200,{ok:true});return;
   }
-  if(!requireHost(room,body,res,role))return;
+  if(!requireHost(room,body,res,role,user))return;
   if(action==='navigate'&&req.method==='POST') {
     const index=Number(body.index);
     if(!Number.isInteger(index)||index<0||index>=room.questions.length){err(res,400,'Questão não existe.');return;}
