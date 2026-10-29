@@ -12,6 +12,7 @@
 <header class="topbar">
   <div class="brand"><span class="brand-mark">✦</span><span>ESTUDO<span class="brand-secondary"> EM DUPLA</span></span></div>
   <div id="accountBar" class="account-bar hidden"><span id="accountEmail"></span><button id="logout" class="btn btn-small btn-soft">Sair da conta</button></div>
+  <a id="bankNavLink" href="/banco" class="btn btn-small btn-soft hidden" style="text-decoration:none;margin-left:auto;margin-right:14px">📚 Banco de questões</a>
   <div id="topRoom" class="top-room hidden"><span class="live-dot"></span> SALA <strong id="roomCode"></strong><button id="copyLink" class="btn btn-small btn-soft">Copiar link</button></div>
 </header>
 <main>
@@ -41,6 +42,7 @@
     <h1>Uma questão.<br /><span>Duas respostas.</span></h1>
     <p class="hero-desc" id="landingDescription">Escolha uma sala disponível e estude em dupla, em tempo real.</p>
     <p id="serverNotice" class="server-notice hidden" role="alert"></p>
+    <a href="/banco" class="btn btn-primary" style="display:inline-flex;text-decoration:none;margin-bottom:24px">📚 Resolver questões sozinho →</a>
     <div class="landing-panels">
       <section id="adminCreateCard" class="panel landing-card hidden">
         <div class="card-icon">▣</div>
@@ -77,6 +79,13 @@
       <div class="sidebar-head"><div class="eyebrow">SALA DE ESTUDOS</div><h2 id="roomTitle">Sua sessão</h2><div id="memberStatus" class="member-status">Aguardando participante...</div></div>
       <div class="host-only" id="uploadArea">
         <div id="dropZone" class="drop-zone" tabindex="0"><span class="upload-icon">⇧</span><strong>Importar questões</strong><span>Arraste seu arquivo JSON ou clique aqui</span><small>Enunciados e alternativas serão organizados automaticamente</small><input id="jsonFile" type="file" accept=".json,application/json" aria-label="Selecionar arquivo JSON"></div>
+        <div class="room-bank-import">
+          <strong>Ou carregar do banco de questões</strong>
+          <label for="bankRoomSubject">Disciplina</label><select id="bankRoomSubject"><option value="">Todas</option></select>
+          <label for="bankRoomTopic">Assunto</label><select id="bankRoomTopic"><option value="">Todos</option></select>
+          <label for="bankRoomLimit">Quantidade de questões</label><input type="number" id="bankRoomLimit" min="1" max="200" value="50">
+          <button id="importFromBank" class="btn btn-soft btn-full" type="button">Carregar do banco →</button>
+        </div>
         <div id="importMessage" class="hint"></div>
         <button id="exportJson" class="btn btn-soft btn-full hidden">Baixar JSON organizado</button>
       </div>

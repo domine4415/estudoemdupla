@@ -25,3 +25,10 @@
 .room-status.free{background:#173b2a;color:#a9f1c0}.room-status.busy{background:#373044;color:#d7bddf}
 .sidebar-footer{display:flex;flex-direction:column;gap:9px}
 @media(max-width:700px){.directory-heading{align-items:flex-start}.room-directory{padding:18px}.directory-room .btn{width:100%}.room-status{margin-left:auto}}
+
+/* Importar questões já publicadas no banco para salas ao vivo. */
+.room-bank-import{margin:18px 0 10px;border:1px solid #395666;background:#102c31;padding:13px;border-radius:11px}
+.room-bank-import strong{color:#afeabc;font-size:12px;line-height:1.5;display:block}
+.room-bank-import label{display:block;font-size:10px;color:#b1c5d6;margin:12px 0 6px}
+.room-bank-import input,.room-bank-import select{font-size:12px;padding:9px}
+.room-bank-import .btn-full{margin-top:12px}

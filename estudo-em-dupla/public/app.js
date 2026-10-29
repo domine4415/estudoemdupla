@@ -153,7 +153,7 @@ function render(q){
   const data=q.question;
   $('questionNumber').textContent='QUESTÃO '+String(q.index+1).padStart(2,'0')+' DE '+q.questionsCount;
   $('questionType').textContent=data.type==='true_false'?'CERTO OU ERRADO':'MÚLTIPLA ESCOLHA';
-  $('questionMeta').textContent=[data.board,data.exam,data.subject].filter(Boolean).join(' • ');
+  $('questionMeta').textContent=[data.board,data.exam,data.subject,data.topic].filter(Boolean).join(' • ');
   $('questionStatement').textContent=data.statement;
   const parent=$('answerOptions');parent.replaceChildren();
   for(const opt of data.alternatives){
@@ -171,6 +171,7 @@ function render(q){
     let t=`${q.hostName}: ${a.host||'não respondeu'} • ${q.guestName||'Amigo'}: ${a.guest||'não respondeu'}`;
     if(data.correct)t+='\nGabarito: '+data.correct;
     else t+='\nGabarito não informado. Compare as respostas e confira a questão original.';
+    if(data.commentary)t+='\n\nComentário: '+data.commentary;
     $('feedback').textContent=t;
   }
   if(role==='host'){
@@ -196,6 +197,34 @@ function renderList(q){
     if(item.needsReview)details.classList.add('attention');container.append(title,details);button.append(n,container);
     button.onclick=()=>command('navigate',{index:i});list.append(button);
   }
+}
+let roomBankPairs=[];
+function populateRoomBankTopics(){
+  const select=$('bankRoomTopic'),sub=$('bankRoomSubject').value;
+  select.replaceChildren(new Option('Todos os assuntos',''));
+  for(const item of [...new Set(roomBankPairs.filter(x=>!sub||x.subject===sub).map(x=>x.topic))].sort())select.add(new Option(item,item));
+}
+async function loadRoomBankFilters(){
+  if(!isAdminAccount)return;
+  try{
+    const r=await fetch('/api/bank/facets',{cache:'no-store'});
+    const data=await r.json();if(!r.ok)return;
+    roomBankPairs=data.pairs||[];
+    $('bankRoomSubject').replaceChildren(new Option('Todas as disciplinas',''));
+    for(const sub of data.subjects||[])$('bankRoomSubject').add(new Option(sub,sub));
+    populateRoomBankTopics();
+  }catch(e){console.warn('Filtros do banco indisponíveis:',e);}
+}
+async function importBankIntoRoom(){
+  if(role!=='host')return;
+  const btn=$('importFromBank');btn.disabled=true;
+  try{
+    const reply=await request('/from-bank','POST',{
+      ...credentials(),subject:$('bankRoomSubject').value,topic:$('bankRoomTopic').value,limit:Number($('bankRoomLimit').value)||50
+    });
+    $('importMessage').textContent=reply.imported+' questões carregadas do seu banco.';
+    await refresh();alertUser(reply.imported+' questões do banco prontas para a sala!');
+  }catch(e){alertUser(e.message,true);}finally{btn.disabled=false;}
 }
 function downloadNormalized(){
   const qs=view?.questions||lastImported;if(!qs)return;
@@ -303,6 +332,8 @@ $('editQuestion').addEventListener('click',showEdit);
 $('editForm').addEventListener('submit',saveEdit);
 $('closeDialog').addEventListener('click',()=>$('editDialog').close());
 $('exportJson').addEventListener('click',downloadNormalized);
+$('bankRoomSubject').addEventListener('change',populateRoomBankTopics);
+$('importFromBank').addEventListener('click',importBankIntoRoom);
 $('exitRoom').addEventListener('click',()=>leaveRoom());
 async function checkBackend(){
   const notice=$('serverNotice');
@@ -377,8 +408,10 @@ async function verifyLogin(){
   signedIn=true;isAdminAccount=Boolean(result.isAdmin);
   $('authGate').classList.add('hidden');$('landing').classList.remove('hidden');
   $('adminCreateCard').classList.toggle('hidden',!isAdminAccount);
+  if(isAdminAccount)loadRoomBankFilters();
   $('joinCard').classList.toggle('hidden',isAdminAccount);
   $('landingDescription').textContent=isAdminAccount?'Crie salas, importe questões e acompanhe as respostas em tempo real.':'Escolha uma sala aberta e responda às questões com o administrador.';
+  $('bankNavLink').classList.remove('hidden');
   $('accountBar').classList.remove('hidden');$('accountEmail').textContent=(isAdminAccount?'ADMIN • ':'')+(result.user.email||'Minha conta');
   $('authPassword').value='';
   await initializeApp();
@@ -392,6 +425,7 @@ async function boot(){
     if(es)es.close();
     code=null;token=null;role=null;view=null;signedIn=false;isAdminAccount=false;
     $('topRoom').classList.add('hidden');$('workspace').classList.add('hidden');$('landing').classList.add('hidden');
+    $('bankNavLink').classList.add('hidden');
     $('accountBar').classList.add('hidden');$('authGate').classList.remove('hidden');
     history.replaceState(null,'','/');
     // Remove tokens de sala do navegador ao sair da conta.

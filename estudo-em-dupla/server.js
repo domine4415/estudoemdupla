@@ -5,6 +5,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const crypto = require('node:crypto');
 const PORT = Number(process.env.PORT || 3000);
+const createBankApi = require('./bank-api');
 const rooms = new Map();
 // Persistência opcional. Nunca envie SUPABASE_SECRET_KEY para o frontend.
 const SUPABASE_URL = (process.env.SUPABASE_URL || '').replace(/\/$/, '');
@@ -37,7 +38,7 @@ function databaseRequest(endpoint, init={}) {
     if (!response.ok) {
       const detail = (await response.text()).slice(0,400);
       console.error('Supabase status',response.status, detail);
-      throw new Error('O banco Supabase não respondeu corretamente (HTTP '+response.status+'). Confira a tabela dupla_rooms e as variáveis do Render.');
+      throw new Error('O banco Supabase não respondeu corretamente (HTTP '+response.status+'). Confira as tabelas do Supabase (BANCO_SQL.sql para o banco) e as variáveis do Render.');
     }
     return response;
   });
@@ -278,7 +279,7 @@ function normalizeQuestion(q,i) {
   const answer = typeof q.correct==='string' && alternatives.some(a=>a.letter===q.correct.toUpperCase()) ? q.correct.toUpperCase() : null;
   return {id:safeText(q.id,40)||String(i+1),originalId:safeText(q.originalId,40),statement,
     alternatives, type: q.type === 'true_false' ? 'true_false' : 'multiple_choice',
-    subject:safeText(q.subject,200),exam:safeText(q.exam,250),board:safeText(q.board,80),year:safeText(String(q.year||''),5),
+    subject:safeText(q.subject,200),topic:safeText(q.topic,200),commentary:safeText(q.commentary,10000),exam:safeText(q.exam,250),board:safeText(q.board,80),year:safeText(String(q.year||''),5),
     link: /^https:\/\/(www\.)?tecconcursos\.com\.br\/questoes\/\d+\/?$/.test(q.link||'') ? q.link : '',
     correct:answer, needsReview:alternatives.length<2 || Boolean(q.needsReview)};
 }
@@ -314,8 +315,8 @@ function sanitizedState(r, role) {
   return {
     code:r.code, role, hostName:r.hostName, guestName:r.guest?.name||null,
     index:r.index, questionsCount:r.questions.length, isOpen:r.isOpen!==false, title:r.title||'',
-    questions:role==='host'? r.questions.map(({id,originalId,subject,exam,board,year,link,needsReview,statement,alternatives,type,correct},i)=>({id,originalId,subject,exam,board,year,link,needsReview,statement,alternatives,type,correct,number:i+1})) : undefined,
-    question:q ? {...q,correct: revealed?q.correct:null}:null,
+    questions:role==='host'? r.questions.map(({id,originalId,subject,topic,commentary,exam,board,year,link,needsReview,statement,alternatives,type,correct},i)=>({id,originalId,subject,topic,commentary,exam,board,year,link,needsReview,statement,alternatives,type,correct,number:i+1})) : undefined,
+    question:q ? {...q,correct: revealed?q.correct:null,commentary:revealed?q.commentary:null}:null,
     hostCorrect:role==='host'&&q ? q.correct : undefined,
     answered:{host:!!v.host,guest:!!v.guest}, myAnswer:v[role],
     revealed, answers: revealed?{host:v.host,guest:v.guest}:null,
@@ -402,6 +403,21 @@ async function handleApi(req,res,url,user) {
     await persistRoom(room);notify(room);
     send(res,200,{imported:cleaned.length});return;
   }
+  if(action==='from-bank'&&req.method==='POST') {
+    if(!requireHost(room,body,res,role,user))return;
+    if(!storageEnabled){err(res,503,'Configure o Supabase para carregar questões do banco.');return;}
+    const amount=Math.min(200,Math.max(1,Number.parseInt(body.limit,10)||50));
+    const p=new URLSearchParams({select:'data',published:'eq.true',order:'created_at.desc',limit:String(amount)});
+    const selectedSubject=safeText(body.subject,180),selectedTopic=safeText(body.topic,180);
+    if(selectedSubject)p.set('subject','eq.'+selectedSubject);
+    if(selectedTopic)p.set('topic','eq.'+selectedTopic);
+    const rows=await (await databaseRequest('dupla_bank_questions?'+p)).json();
+    if(!rows.length){err(res,404,'Não existem questões publicadas com esses filtros.');return;}
+    const normalized=rows.map((r,i)=>normalizeQuestion(r.data,i)).filter(Boolean);
+    room.questions=normalized;room.index=0;room.votes={};
+    await persistRoom(room);notify(room);
+    send(res,200,{imported:normalized.length});return;
+  }
   if(action==='answer'&&req.method==='POST') {
     const q=room.questions[room.index];
     if(!q) {err(res,400,'A sala ainda não possui questões.');return;}
@@ -443,7 +459,8 @@ async function handleApi(req,res,url,user) {
   }
   err(res,404,'Ação não encontrada.');
 }
-const files={'/':'index.html','/index.html':'index.html','/app.js':'app.js','/styles.css':'styles.css'};
+const bankApi=createBankApi({databaseRequest,parseJson,send,err,isAdmin,storageEnabled});
+const files={'/banco':'bank.html','/banco.html':'bank.html','/bank.js':'bank.js','/bank.css':'bank.css','/':'index.html','/index.html':'index.html','/app.js':'app.js','/styles.css':'styles.css'};
 const mime={'.html':'text/html; charset=utf-8','.css':'text/css; charset=utf-8','.js':'application/javascript; charset=utf-8'};
 const server=http.createServer(async(req,res)=>{
   try {
@@ -454,6 +471,7 @@ const server=http.createServer(async(req,res)=>{
       if(url.pathname.startsWith('/api/auth/'))return await handleAuth(req,res,url);
       const user=await currentUser(req,res);
       if(!user){err(res,401,'Entre na sua conta para acessar as salas.');return;}
+      if(url.pathname.startsWith('/api/bank/'))return await bankApi.handle(req,res,url,user);
       return await handleApi(req,res,url,user);
     }
     const filename=files[url.pathname];

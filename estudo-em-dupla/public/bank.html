@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#090e19">
+<title>Banco de Questões • Estudo em Dupla</title>
+<link rel="stylesheet" href="/styles.css"><link rel="stylesheet" href="/bank.css">
+<script src="/bank.js" defer></script>
+</head>
+<body>
+<header class="topbar bank-topbar">
+ <a class="brand" href="/" aria-label="Voltar à página inicial"><span class="brand-mark">✦</span><span>ESTUDO<span class="brand-secondary"> EM DUPLA</span></span></a>
+ <nav class="bank-nav"><a class="bank-nav-link active" href="/banco">Banco de questões</a><a class="bank-nav-link" href="/">Salas ao vivo</a><span id="who" class="bank-who"></span></nav>
+</header>
+<main class="bank-main">
+ <div id="loginRequired" class="bank-login panel hidden"><h2>Entre na sua conta para estudar</h2><p>O banco de questões guarda as suas respostas individualmente.</p><a class="btn btn-primary" href="/">Fazer login →</a></div>
+ <div id="pageBody" class="hidden">
+   <div class="bank-hero">
+      <div><div class="eyebrow">ESTUDE NO SEU RITMO</div><h1>Banco de <span>questões.</span></h1><p>Escolha uma disciplina e um tópico. Responda quando quiser — sem criar nem entrar em sala.</p></div>
+      <button id="adminToggle" class="btn btn-soft hidden" type="button">⚙ Gerenciar questões</button>
+   </div>
+   <div class="bank-stats">
+      <div class="bank-stat"><strong id="statTotal">—</strong><span>Questões disponíveis</span></div>
+      <div class="bank-stat"><strong id="statAnswered">—</strong><span>Questões respondidas</span></div>
+      <div class="bank-stat"><strong id="statCorrect">—</strong><span>Últimas respostas certas</span></div>
+      <div class="bank-stat"><strong id="statWrong">—</strong><span>Últimas respostas erradas</span></div>
+   </div>
+   <div id="studyPane" class="bank-layout">
+      <aside class="panel bank-filter">
+        <div class="eyebrow">PERSONALIZAR ESTUDO</div><h2>Filtros</h2>
+        <label for="filterSearch">Buscar no enunciado</label><input id="filterSearch" placeholder="Ex.: abuso de autoridade" maxlength="70">
+        <label for="filterSubject">Disciplina</label><select id="filterSubject"><option value="">Todas as disciplinas</option></select>
+        <label for="filterTopic">Tópico / Assunto</label><select id="filterTopic"><option value="">Todos os tópicos</option></select>
+        <label for="filterBoard">Banca</label><select id="filterBoard"><option value="">Todas as bancas</option></select>
+        <label for="filterYear">Ano</label><select id="filterYear"><option value="">Todos os anos</option></select>
+        <button id="applyFilter" class="btn btn-primary btn-full">Buscar questões →</button>
+        <button id="clearFilter" class="btn btn-soft btn-full">Limpar filtros</button>
+        <p class="filter-note">O gabarito e o comentário aparecem após você responder. Seu histórico fica salvo na sua conta.</p>
+      </aside>
+      <section class="panel bank-results"><div class="list-head"><div><div class="eyebrow">QUESTÕES ENCONTRADAS</div><h2>Escolha uma questão</h2></div><span id="pageDisplay" class="tiny muted"></span></div>
+        <p id="listMessage" class="bank-note">Carregando...</p><div id="questionCards" class="bank-cards"></div>
+        <div class="pager"><button id="previousPage" class="btn btn-soft" type="button">← Anterior</button><button id="nextPage" class="btn btn-soft" type="button">Próxima →</button></div>
+      </section>
+      <section class="panel bank-question"><div id="questionEmpty" class="bank-question-empty"><div class="empty-symbol">◈</div><h2>Escolha uma questão</h2><p>Você pode estudar sozinho e conferir a correção imediatamente.</p></div>
+        <div id="questionContent" class="hidden">
+          <div class="question-top"><div id="questionLabel" class="eyebrow">QUESTÃO</div><span id="questionBadge" class="pill">MÚLTIPLA ESCOLHA</span></div>
+          <div id="questionMetadata" class="question-meta"></div>
+          <div id="bankStatement" class="statement"></div>
+          <div id="bankOptions" class="answer-options"></div>
+          <div id="bankFeedback" class="bank-feedback hidden" role="status"></div>
+          <div class="bank-question-actions"><button id="repeatQuestion" class="btn btn-soft hidden">Responder novamente</button><button id="adminEditCurrent" class="btn btn-outline hidden">Editar questão</button></div>
+        </div>
+      </section>
+   </div>
+   <section id="adminPane" class="hidden bank-admin panel">
+      <div class="admin-heading"><div><div class="eyebrow">EXCLUSIVO DO ADMINISTRADOR</div><h2>Gerenciar banco de questões</h2><p>Importe questões autorais ou autorizadas com gabarito e comentários próprios. As incompletas ficam como rascunho.</p></div><button id="backToStudy" class="btn btn-soft">← Voltar ao banco</button></div>
+      <div class="admin-grid">
+        <div class="panel admin-box"><button id="createOriginal" type="button" class="btn btn-outline" style="width:100%;margin-bottom:22px">+ Criar questão original manualmente</button><h3>Importar JSON</h3>
+          <label for="adminFile">Arquivo de questões (.json)</label><input type="file" id="adminFile" accept=".json,application/json">
+          <label for="subjectOverride">Disciplina padrão (opcional)</label><input id="subjectOverride" placeholder="Ex.: Direito Penal">
+          <label for="topicOverride">Tópico padrão (opcional)</label><input id="topicOverride" placeholder="Ex.: Crimes contra a vida">
+          <div id="importPreview" class="bank-note">Selecione um JSON para visualizar o que será importado.</div>
+          <label class="rights-line"><input type="checkbox" id="rightsConfirmed"><span>Confirmo que tenho autorização para disponibilizar estas questões aos usuários do site.</span></label>
+          <button id="publishImport" class="btn btn-primary btn-full" disabled>Importar para o banco →</button>
+          <p class="filter-note">Aceita campos <code>statement</code>, <code>alternatives</code>, <code>correct</code>, <code>commentary</code>, <code>subject</code> e <code>topic</code>, além de JSONs organizados anteriormente.</p>
+        </div>
+        <div class="panel admin-box"><div class="list-head"><h3>Revisar questões</h3><button id="refreshDrafts" class="btn btn-soft btn-small">Atualizar</button></div>
+          <div class="admin-tabs"><button id="showDrafts" class="btn btn-small btn-primary">Rascunhos</button><button id="showPublished" class="btn btn-small btn-soft">Publicadas</button></div>
+          <p class="bank-note" id="draftNotice">Carregando...</p><div id="draftList" class="bank-cards"></div>
+          <button id="moreDrafts" class="btn btn-soft btn-full hidden">Próxima página →</button>
+        </div>
+      </div>
+   </section>
+ </div>
+</main>
+<dialog id="editorDialog" class="modal bank-editor">
+ <form id="editorForm"><div class="modal-title"><h2>Editar e conferir questão</h2><button id="closeEditor" type="button" class="btn btn-ghost">Fechar ✕</button></div>
+  <p class="bank-note">Revise o gabarito e o comentário antes de publicar.</p>
+  <div class="editor-pair"><div><label for="editSubject">Disciplina</label><input id="editSubject" required></div><div><label for="editTopic">Assunto</label><input id="editTopic" required></div></div>
+  <div class="editor-pair"><div><label for="editBoard">Banca</label><input id="editBoard"></div><div><label for="editYear">Ano</label><input id="editYear" type="number" min="1900" max="2100"></div></div>
+  <label for="editStatement">Enunciado</label><textarea id="editStatement" rows="6" required></textarea>
+  <label for="editAlternatives">Alternativas: uma por linha (A) texto)</label><textarea id="editAlternatives" rows="5" required></textarea>
+  <label for="editCorrect">Gabarito</label><select id="editCorrect"><option value="">Ainda não verificado (rascunho)</option></select>
+  <label for="editCommentary">Comentário explicativo (você pode inserir um comentário criado e revisado por você)</label><textarea id="editCommentary" rows="7" placeholder="Explique por que a alternativa correta é correta e as demais não são..."></textarea>
+  <label class="rights-line"><input type="checkbox" id="editPublished"><span>Publicar para os alunos (exige gabarito)</span></label>
+  <div class="editor-actions"><button id="deleteQuestion" type="button" class="btn btn-outline">Excluir</button><button type="submit" class="btn btn-primary">Salvar questão</button></div>
+ </form>
+</dialog>
+<div id="bankToast" class="toast hidden" role="status"></div>
+</body>
+</html>
