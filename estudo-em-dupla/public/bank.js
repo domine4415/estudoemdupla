@@ -267,7 +267,7 @@ async function showStats(){
 async function boot(){
   try{
     const session=await api('auth/me');if(!session.authenticated){$('loginRequired').classList.remove('hidden');return;}
-    admin=!!session.isAdmin;$('pageBody').classList.remove('hidden');$('who').textContent=(admin?'ADMIN • ':'')+session.user?.email;
+    admin=!!session.isAdmin;$('createRoomNav').classList.toggle('hidden',!admin);$('pageBody').classList.remove('hidden');$('who').textContent=(admin?'ADMIN • ':'')+session.user?.email;
     $('adminToggle').classList.toggle('hidden',!admin);
   }catch(e){$('loginRequired').classList.remove('hidden');return;}
   $('statsToggle').onclick=async()=>{showStats();document.getElementById('sideNav').classList.remove('open');document.getElementById('menuShade').hidden=true;};

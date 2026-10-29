@@ -40,3 +40,12 @@ a.brand{text-decoration:none}.bank-topbar{gap:14px}.bank-nav{display:flex;align-
 
 /* Banco abre direto nas questões; métricas detalhadas ficam na seção Estatísticas */
 .bank-hero{margin:4px 0 14px}.bank-hero>div{display:none}#pageBody>.bank-stats{display:none}
+/* V4: rail de navegação profissional com SVG, sem emojis */
+.side-nav{width:68px;padding:15px 9px;gap:9px;background:linear-gradient(180deg,#111f31 0%,#0d1828 85%);border-right:1px solid #30455a;box-shadow:7px 0 35px #0003;backdrop-filter:blur(16px)}
+.side-nav:hover,.side-nav:focus-within{width:258px;box-shadow:12px 0 45px #0007}
+.side-brand,.side-link{height:51px;min-height:51px;padding:8px 11px;border-radius:13px;gap:16px}
+.side-brand{margin:6px 0 24px;font-size:12px;letter-spacing:1px}.side-link{font-size:13px;font-weight:650;transition:background .18s,transform .18s,color .18s}.side-link:hover{transform:translateX(2px);background:#253b50}.side-link:active{transform:scale(.97)}.side-link.selected{border:1px solid #466657;background:linear-gradient(110deg,#26463d,#203448);color:#b4f0c8}
+.side-icon{width:28px;height:28px;flex:0 0 28px;display:grid;place-items:center}.side-icon svg{width:23px;height:23px;stroke-width:1.8}.side-brand .side-icon{border-radius:9px;background:#9debbb;color:#10251e;padding:5px}.side-label{font-size:13px}.side-user{padding:9px 10px;line-height:1.5}
+.bank-main{margin-left:78px}.bank-results .inline-question{transition:transform .2s,border-color .2s,box-shadow .2s}.inline-question:hover{border-color:#486a69;box-shadow:0 9px 26px #0002}
+.mobile-menu .hamburger-lines,.hamburger-lines:before,.hamburger-lines:after{display:block;width:19px;height:2px;background:#b6f3c9;position:relative;border-radius:3px;content:""}.hamburger-lines:before{position:absolute;top:-6px}.hamburger-lines:after{position:absolute;top:6px}
+@media(max-width:720px){.bank-main{margin-left:0}.mobile-menu{display:grid;place-items:center;width:43px;height:43px;padding:0;background:#1c3040;box-shadow:0 5px 20px #0006}.side-nav{width:min(290px,85vw);padding:19px 12px}.side-nav.open,.side-nav.open:hover{width:min(290px,85vw)}.side-nav .side-label{opacity:1}}

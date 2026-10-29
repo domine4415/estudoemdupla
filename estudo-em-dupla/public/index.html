@@ -8,12 +8,12 @@
 <link rel="stylesheet" href="/styles.css" />
 <script src="/app.js" defer></script>
 </head>
-<body><button class="home-menu-button" id="homeMenuButton" aria-label="Abrir navegação">☰</button><nav class="home-side-nav" id="homeSideNav" aria-label="Navegação"><a href="/banco"><span>📚</span><b>Banco de questões</b></a><a href="/banco#estatisticas"><span>📊</span><b>Estatísticas</b></a><a href="/"><span>👥</span><b>Salas ao vivo</b></a></nav><script>document.addEventListener('DOMContentLoaded',()=>{const b=document.getElementById('homeMenuButton');b.onclick=()=>document.getElementById('homeSideNav').classList.toggle('open')})</script>
+<body>
 <header class="topbar">
   <div class="brand"><span class="brand-mark">✦</span><span>ESTUDO<span class="brand-secondary"> EM DUPLA</span></span></div>
   <div id="accountBar" class="account-bar hidden"><span id="accountEmail"></span><button id="logout" class="btn btn-small btn-soft">Sair da conta</button></div>
-  <a id="bankNavLink" href="/banco" class="btn btn-small btn-soft hidden" style="text-decoration:none;margin-left:auto;margin-right:14px">📚 Banco de questões</a>
-  <div id="topRoom" class="top-room hidden"><span class="live-dot"></span> SALA <strong id="roomCode"></strong><button id="copyLink" class="btn btn-small btn-soft">Copiar link</button></div>
+  <a id="bankNavLink" href="/banco" class="btn btn-small btn-soft hidden" style="text-decoration:none;margin-left:auto;margin-right:14px">Banco de questões</a>
+  <nav id="roomQuickNav" class="room-quick-nav hidden" aria-label="Atalhos da sala"><a href="/banco" title="Banco de questões"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v16H6.5A2.5 2.5 0 0 0 4 21z"/><path d="M4 5.5v13A2.5 2.5 0 0 1 6.5 16H20M8 7h8M8 11h6"/></svg></a><a href="/banco#estatisticas" title="Estatísticas"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M7 17v-5m5 5V7m5 10v-7"/></svg></a><a href="/" title="Salas ao vivo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3"/><path d="M3 19v-2a6 6 0 0 1 12 0v2H3zM17 5a3 3 0 0 1 0 6m1 3a5 5 0 0 1 3 5"/></svg></a></nav><div id="topRoom" class="top-room hidden"><span class="live-dot"></span> SALA <strong id="roomCode"></strong><button id="copyLink" class="btn btn-small btn-soft">Copiar link</button></div>
 </header>
 <main>
   <section id="authGate" class="auth-layout">
@@ -42,30 +42,27 @@
     <h1>Uma questão.<br /><span>Duas respostas.</span></h1>
     <p class="hero-desc" id="landingDescription">Escolha uma sala disponível e estude em dupla, em tempo real.</p>
     <p id="serverNotice" class="server-notice hidden" role="alert"></p>
-    <a href="/banco" class="btn btn-primary" style="display:inline-flex;text-decoration:none;margin-bottom:24px">📚 Resolver questões sozinho →</a>
-    <div class="landing-panels">
-      <section id="adminCreateCard" class="panel landing-card hidden">
-        <div class="card-icon">▣</div>
-        <h2>Criar sala de estudos</h2>
-        <p>Você controla as questões no computador. Seu amigo entra pelo celular.</p>
-        <label for="roomName">Nome da sala</label>
-        <input id="roomName" placeholder="Ex.: Direito Penal • IGEDUC" maxlength="70" />
-        <label for="hostName">Seu nome</label>
-        <input id="hostName" placeholder="Ex.: Dom" maxlength="30" value="Administrador" />
+    <section class="home-actions" aria-label="Acessos principais">
+      <a href="/banco" class="home-action"><span class="action-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v16H6.5A2.5 2.5 0 0 0 4 21z"/><path d="M4 5.5v13A2.5 2.5 0 0 1 6.5 16H20M8 7h8M8 11h6"/></svg></span><span class="action-copy"><strong>Banco de questões</strong><small>Resolva questões no seu ritmo</small></span><span class="action-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M5 12h14m-6-6 6 6-6 6"/></svg></span></a>
+      <a href="/banco#estatisticas" class="home-action"><span class="action-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M7 17v-5m5 5V7m5 10v-7"/></svg></span><span class="action-copy"><strong>Estatísticas</strong><small>Acompanhe acertos e evolução</small></span><span class="action-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M5 12h14m-6-6 6 6-6 6"/></svg></span></a>
+      <a href="#salas-abertas" class="home-action"><span class="action-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3"/><path d="M3 19v-2a6 6 0 0 1 12 0v2H3zM17 5a3 3 0 0 1 0 6m1 3a5 5 0 0 1 3 5"/></svg></span><span class="action-copy"><strong>Salas ao vivo</strong><small>Estude com outro participante</small></span><span class="action-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M5 12h14m-6-6 6 6-6 6"/></svg></span></a>
+      <button id="openCreatePanel" type="button" class="home-action hidden" aria-controls="createRoomPanel" aria-expanded="false"><span class="action-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="3" width="18" height="18" rx="4"/><path d="M12 7v10M7 12h10"/></svg></span><span class="action-copy"><strong>Criar sala</strong><small>Acesso exclusivo do administrador</small></span><span class="action-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M5 12h14m-6-6 6 6-6 6"/></svg></span></button>
+    </section>
+    <section id="createRoomPanel" class="home-create-panel hidden" aria-label="Criar sala">
+      <div class="create-title"><div><div class="eyebrow">PAINEL DO ADMINISTRADOR</div><h2>Criar sala de estudos</h2></div><button id="closeCreatePanel" class="btn btn-soft btn-small" type="button">Fechar</button></div>
+      <div class="landing-panels"><section id="adminCreateCard" class="panel landing-card hidden">
+        <p>Crie uma sala, importe questões ou carregue questões do banco.</p>
+        <label for="roomName">Nome da sala</label><input id="roomName" placeholder="Ex.: Direito Penal • IGEDUC" maxlength="70" />
+        <label for="hostName">Seu nome</label><input id="hostName" placeholder="Ex.: Dom" maxlength="30" value="Administrador" />
         <button id="createRoom" class="btn btn-primary btn-full">Criar sala <span>→</span></button>
-      </section>
-      <section id="joinCard" class="panel landing-card hidden">
-        <div class="card-icon">◎</div>
-        <h2>Entrar com um código</h2>
-        <p>Seu amigo enviou um link ou um código de sala? Entre por aqui.</p>
-        <label for="joinName">Seu nome</label>
-        <input id="joinName" placeholder="Ex.: Rafael" maxlength="30" />
-        <label for="joinCode">Código da sala</label>
-        <input id="joinCode" placeholder="Ex.: A7K3PL" maxlength="6" autocapitalize="characters" />
-        <button id="joinRoom" class="btn btn-outline btn-full">Entrar na sala <span>→</span></button>
-      </section>
-    </div>
-    <section class="panel room-directory" aria-label="Salas abertas">
+      </section></div>
+    </section>
+    <section class="landing-panels hidden"><section id="joinCard" class="panel landing-card hidden">
+        <label for="joinName">Seu nome</label><input id="joinName" placeholder="Ex.: Rafael" maxlength="30" />
+        <label for="joinCode">Código da sala</label><input id="joinCode" placeholder="Ex.: A7K3PL" maxlength="6" autocapitalize="characters" />
+        <button id="joinRoom" class="btn btn-outline btn-full">Entrar na sala</button>
+    </section></section>
+    <section id="salas-abertas" class="panel room-directory" aria-label="Salas abertas">
       <div class="directory-heading"><div><div class="eyebrow">SALAS DE ESTUDO</div><h2>Salas abertas</h2><p>Escolha uma sala para entrar. Cada sala aceita um participante além do administrador.</p></div>
         <button id="refreshRooms" class="btn btn-soft btn-small" type="button">Atualizar ↻</button></div>
       <div id="roomsNotice" class="directory-notice" role="status">Procurando salas...</div>

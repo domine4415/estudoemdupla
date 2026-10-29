@@ -28,7 +28,7 @@ async function request(endpoint,method='GET',body){
 }
 function credentials(){return role==='host'?{hostToken:token}:{token};}
 function roomLink(){return location.origin+'/?room='+encodeURIComponent(code);}
-function setSession(c,t,r){if(!signedIn){showAuthMessage('Entre na conta antes de acessar a sala.',true);return;}code=c;token=t;role=r;localStorage.setItem('dupla_'+code,JSON.stringify({token,role}));localStorage.setItem('dupla_last_room',code);history.replaceState(null,'','/?room='+code);$('landing').classList.add('hidden');$('workspace').classList.remove('hidden');$('topRoom').classList.remove('hidden');$('roomCode').textContent=code;document.body.classList.toggle('guest',role==='guest');$('roomTitle').textContent=role==='host'?'Sala '+code:'Sala '+code;connect();refresh();}
+function setSession(c,t,r){if(!signedIn){showAuthMessage('Entre na conta antes de acessar a sala.',true);return;}code=c;token=t;role=r;localStorage.setItem('dupla_'+code,JSON.stringify({token,role}));localStorage.setItem('dupla_last_room',code);history.replaceState(null,'','/?room='+code);$('landing').classList.add('hidden');$('workspace').classList.remove('hidden');$('topRoom').classList.remove('hidden');$('roomQuickNav').classList.remove('hidden');$('roomCode').textContent=code;document.body.classList.toggle('guest',role==='guest');$('roomTitle').textContent=role==='host'?'Sala '+code:'Sala '+code;connect();refresh();}
 function connect(){if(es)es.close();es=new EventSource('/api/room/'+encodeURIComponent(code)+'/events?token='+encodeURIComponent(token));es.addEventListener('refresh',()=>refresh());es.onerror=()=>{};}
 let ongoing=null,refreshQueued=false;
 async function refresh(){
@@ -253,7 +253,7 @@ function leaveRoom(message=''){
   if(code){localStorage.removeItem('dupla_'+code);}
   localStorage.removeItem('dupla_last_room');
   code=null;token=null;role=null;view=null;
-  $('topRoom').classList.add('hidden');
+  $('topRoom').classList.add('hidden');$('roomQuickNav').classList.add('hidden');
   $('workspace').classList.add('hidden');$('landing').classList.remove('hidden');
   document.body.classList.remove('guest');history.replaceState(null,'','/');
   loadRooms();
@@ -407,7 +407,7 @@ async function verifyLogin(){
   if(!result.authenticated)throw Error('Não foi possível confirmar seu login.');
   signedIn=true;isAdminAccount=Boolean(result.isAdmin);
   $('authGate').classList.add('hidden');$('landing').classList.remove('hidden');
-  $('adminCreateCard').classList.toggle('hidden',!isAdminAccount);
+  $('adminCreateCard').classList.toggle('hidden',!isAdminAccount);$('openCreatePanel').classList.toggle('hidden',!isAdminAccount);
   if(isAdminAccount)loadRoomBankFilters();
   $('joinCard').classList.toggle('hidden',isAdminAccount);
   $('landingDescription').textContent=isAdminAccount?'Crie salas, importe questões e acompanhe as respostas em tempo real.':'Escolha uma sala aberta e responda às questões com o administrador.';
@@ -424,7 +424,7 @@ async function boot(){
     try {await authFetch('logout','POST',{});}catch(e){alertUser(e.message,true);return;}
     if(es)es.close();
     code=null;token=null;role=null;view=null;signedIn=false;isAdminAccount=false;
-    $('topRoom').classList.add('hidden');$('workspace').classList.add('hidden');$('landing').classList.add('hidden');
+    $('topRoom').classList.add('hidden');$('roomQuickNav').classList.add('hidden');$('workspace').classList.add('hidden');$('landing').classList.add('hidden');
     $('bankNavLink').classList.add('hidden');
     $('accountBar').classList.add('hidden');$('authGate').classList.remove('hidden');
     history.replaceState(null,'','/');
@@ -440,3 +440,8 @@ async function boot(){
   }catch(e){showAuthMessage(e.message,true);}
 }
 boot();
+
+// Painel administrativo de criação: permanece fechado na página inicial.
+document.getElementById('openCreatePanel').addEventListener('click',()=>{const p=document.getElementById('createRoomPanel');p.classList.remove('hidden');document.getElementById('openCreatePanel').setAttribute('aria-expanded','true');p.scrollIntoView({behavior:'smooth',block:'center'});});
+document.getElementById('closeCreatePanel').addEventListener('click',()=>{document.getElementById('createRoomPanel').classList.add('hidden');document.getElementById('openCreatePanel').setAttribute('aria-expanded','false');});
+if(new URLSearchParams(location.search).get('action')==='criar'){window.addEventListener('load',()=>{let tries=0;const t=setInterval(()=>{const b=document.getElementById('openCreatePanel');if(b&&!b.classList.contains('hidden')){clearInterval(t);b.click();}if(++tries>35)clearInterval(t);},250);});}
