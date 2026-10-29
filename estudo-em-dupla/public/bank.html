@@ -10,7 +10,7 @@
 <body>
 <header class="topbar bank-topbar">
  <a class="brand" href="/" aria-label="Voltar à página inicial"><span class="brand-mark">✦</span><span>ESTUDO<span class="brand-secondary"> EM DUPLA</span></span></a>
- <nav class="bank-nav"><a class="bank-nav-link active" href="/banco">Banco de questões</a><a class="bank-nav-link" href="/">Salas ao vivo</a><span id="who" class="bank-who"></span></nav>
+ <nav class="bank-nav"><a class="bank-nav-link active" href="/banco">Banco de questões</a><button id="statsToggle" type="button" class="bank-nav-link bank-nav-button">Estatísticas</button><a class="bank-nav-link" href="/">Salas ao vivo</a><span id="who" class="bank-who"></span></nav>
 </header>
 <main class="bank-main">
  <div id="loginRequired" class="bank-login panel hidden"><h2>Entre na sua conta para estudar</h2><p>O banco de questões guarda as suas respostas individualmente.</p><a class="btn btn-primary" href="/">Fazer login →</a></div>
@@ -33,15 +33,17 @@
         <label for="filterTopic">Tópico / Assunto</label><select id="filterTopic"><option value="">Todos os tópicos</option></select>
         <label for="filterBoard">Banca</label><select id="filterBoard"><option value="">Todas as bancas</option></select>
         <label for="filterYear">Ano</label><select id="filterYear"><option value="">Todos os anos</option></select>
+        <label for="filterStatus">Situação</label><select id="filterStatus"><option value="">Todas as questões</option><option value="unanswered">Não resolvidas</option><option value="answered">Já resolvidas</option></select>
+        <label for="filterType">Tipo de questão</label><select id="filterType"><option value="">Todos os tipos</option><option value="true_false">Certo ou errado</option><option value="multiple_choice">Múltipla escolha</option></select>
         <button id="applyFilter" class="btn btn-primary btn-full">Buscar questões →</button>
         <button id="clearFilter" class="btn btn-soft btn-full">Limpar filtros</button>
         <p class="filter-note">O gabarito e o comentário aparecem após você responder. Seu histórico fica salvo na sua conta.</p>
       </aside>
-      <section class="panel bank-results"><div class="list-head"><div><div class="eyebrow">QUESTÕES ENCONTRADAS</div><h2>Escolha uma questão</h2></div><span id="pageDisplay" class="tiny muted"></span></div>
+      <section class="panel bank-results"><div class="list-head"><div><div class="eyebrow">BANCO DE QUESTÕES</div><h2>Lista de questões</h2></div><span id="pageDisplay" class="tiny muted"></span></div>
         <p id="listMessage" class="bank-note">Carregando...</p><div id="questionCards" class="bank-cards"></div>
         <div class="pager"><button id="previousPage" class="btn btn-soft" type="button">← Anterior</button><button id="nextPage" class="btn btn-soft" type="button">Próxima →</button></div>
       </section>
-      <section class="panel bank-question"><div id="questionEmpty" class="bank-question-empty"><div class="empty-symbol">◈</div><h2>Escolha uma questão</h2><p>Você pode estudar sozinho e conferir a correção imediatamente.</p></div>
+      <section class="panel bank-question hidden"><div id="questionEmpty" class="bank-question-empty"><div class="empty-symbol">◈</div><h2>Escolha uma questão</h2><p>Você pode estudar sozinho e conferir a correção imediatamente.</p></div>
         <div id="questionContent" class="hidden">
           <div class="question-top"><div id="questionLabel" class="eyebrow">QUESTÃO</div><span id="questionBadge" class="pill">MÚLTIPLA ESCOLHA</span></div>
           <div id="questionMetadata" class="question-meta"></div>
@@ -52,6 +54,10 @@
         </div>
       </section>
    </div>
+   <section id="statsPane" class="hidden panel bank-admin">
+     <div class="admin-heading"><div><div class="eyebrow">MEU DESEMPENHO</div><h2>Estatísticas de estudo</h2><p>Resultados individuais das questões resolvidas, por disciplina. Consideramos a resposta mais recente em cada questão.</p></div><button id="statsBack" class="btn btn-soft" type="button">← Voltar às questões</button></div>
+     <div id="statsSummary" class="bank-stats"></div><h3>Desempenho por disciplina</h3><div id="statsSubjects" class="stats-subjects"></div>
+   </section>
    <section id="adminPane" class="hidden bank-admin panel">
       <div class="admin-heading"><div><div class="eyebrow">EXCLUSIVO DO ADMINISTRADOR</div><h2>Gerenciar banco de questões</h2><p>Importe questões autorais ou autorizadas com gabarito e comentários próprios. As incompletas ficam como rascunho.</p></div><button id="backToStudy" class="btn btn-soft">← Voltar ao banco</button></div>
       <div class="admin-grid">

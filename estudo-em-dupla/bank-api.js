@@ -78,7 +78,7 @@ module.exports=function createBankApi({databaseRequest,parseJson,send,err,isAdmi
     }
     if(op==='questions'&&req.method==='GET'){
       const page=Math.min(1000,Math.max(1,Number.parseInt(url.searchParams.get('page')||'1',10)||1));
-      const p=new URLSearchParams({select:'id,subject,topic,board,exam_year,statement,has_key,has_commentary',published:'eq.true',order:'created_at.desc',limit:String(MAX_PAGE+1),offset:String((page-1)*MAX_PAGE)});
+      const p=new URLSearchParams({select:'id,subject,topic,board,exam_year,statement,has_key,has_commentary,data',published:'eq.true',order:'created_at.desc',limit:String(MAX_PAGE+1),offset:String((page-1)*MAX_PAGE)});
       for(const [field,column,max] of [['subject','subject',180],['topic','topic',180],['board','board',120],['year','exam_year',4]]){
         const value=trimmed(url.searchParams.get(field),max);
         if(value)p.set(column,'eq.'+value);
@@ -88,9 +88,22 @@ module.exports=function createBankApi({databaseRequest,parseJson,send,err,isAdmi
         const escaped=search.replace(/[%,()*]/g,' ').trim();
         if(escaped)p.set('statement','ilike.*'+escaped+'*');
       }
+      // Histórico por usuário é consultado no servidor; nenhuma chave privilegiada é enviada ao navegador.
+      const status=trimmed(url.searchParams.get('status'),15);
+      const kind=trimmed(url.searchParams.get('type'),25);
+      if(kind==='true_false')p.set('data->>type','eq.true_false');
+      if(kind==='multiple_choice')p.set('data->>type','eq.multiple_choice');
+      if(status==='unanswered'||status==='answered'){
+        const attemptRows=await json('dupla_bank_attempts?'+new URLSearchParams({select:'question_id',user_id:'eq.'+user.id,limit:'100000'}));
+        const ids=[...new Set(attemptRows.map(a=>a.question_id))];
+        if(ids.length){
+          if(status==='answered')p.set('id','in.('+ids.join(',')+')');
+          else p.set('id','not.in.('+ids.join(',')+')');
+        }else if(status==='answered')return send(res,200,{items:[],page,hasMore:false});
+      }
       const rows=await json('dupla_bank_questions?'+p);
       return send(res,200,{items:rows.slice(0,MAX_PAGE).map(x=>({id:x.id,subject:x.subject,topic:x.topic,board:x.board,
-        year:x.exam_year,preview:x.statement.slice(0,250),hasKey:x.has_key,hasCommentary:x.has_commentary})),page,hasMore:rows.length>MAX_PAGE});
+        year:x.exam_year,type:x.data?.type||'multiple_choice',preview:x.statement.slice(0,250),hasKey:x.has_key,hasCommentary:x.has_commentary})),page,hasMore:rows.length>MAX_PAGE});
     }
     if(op==='question'&&parts.length===2&&req.method==='GET'){
       const row=await questionById(parts[1]);
@@ -111,6 +124,15 @@ module.exports=function createBankApi({databaseRequest,parseJson,send,err,isAdmi
         body:JSON.stringify({user_id:user.id,question_id:row.id,choice,is_correct:isCorrect})});
       return send(res,200,{choice,isCorrect,correct:q.correct,commentary:q.commentary||'',
         alternatives:q.alternatives});
+    }
+    if(op==='statistics'&&req.method==='GET'){
+      const questions=await json('dupla_bank_questions?'+new URLSearchParams({select:'id,subject,topic',published:'eq.true',limit:'100000'}));
+      const attempts=await json('dupla_bank_attempts?'+new URLSearchParams({select:'id,question_id,is_correct,answered_at',user_id:'eq.'+user.id,order:'answered_at.desc,id.desc',limit:'100000'}));
+      const latest=new Map();for(const a of attempts)if(!latest.has(a.question_id))latest.set(a.question_id,a);
+      const groups=new Map();
+      for(const q of questions){let g=groups.get(q.subject);if(!g){g={subject:q.subject,total:0,answered:0,correct:0,wrong:0};groups.set(q.subject,g);}g.total++;
+        const a=latest.get(q.id);if(a){g.answered++;if(a.is_correct)g.correct++;else g.wrong++;}}
+      return send(res,200,{total:questions.length,answered:[...groups.values()].reduce((n,g)=>n+g.answered,0),correct:[...groups.values()].reduce((n,g)=>n+g.correct,0),wrong:[...groups.values()].reduce((n,g)=>n+g.wrong,0),attempts:attempts.length,subjects:[...groups.values()].sort((a,b)=>a.subject.localeCompare(b.subject,'pt-BR'))});
     }
     if(op==='progress'&&req.method==='GET'){
       // Visão da tentativa MAIS RECENTE de cada questão.
