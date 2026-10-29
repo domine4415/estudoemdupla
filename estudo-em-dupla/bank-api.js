@@ -4,7 +4,7 @@
 const crypto=require('node:crypto');
 const UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const MAX_BATCH=250;
-const MAX_PAGE=30;
+const MAX_PAGE=10;
 const letters='ABCDEFGH';
 function trimmed(value,max=1000){return typeof value==='string'?value.trim().slice(0,max):'';}
 function normalize(q){
@@ -102,8 +102,11 @@ module.exports=function createBankApi({databaseRequest,parseJson,send,err,isAdmi
         }else if(status==='answered')return send(res,200,{items:[],page,hasMore:false});
       }
       const rows=await json('dupla_bank_questions?'+p);
-      return send(res,200,{items:rows.slice(0,MAX_PAGE).map(x=>({id:x.id,subject:x.subject,topic:x.topic,board:x.board,
-        year:x.exam_year,type:x.data?.type||'multiple_choice',preview:x.statement.slice(0,250),hasKey:x.has_key,hasCommentary:x.has_commentary})),page,hasMore:rows.length>MAX_PAGE});
+      const visible=rows.slice(0,MAX_PAGE);
+      const attemptRows=visible.length?await json('dupla_bank_attempts?'+new URLSearchParams({select:'question_id,choice,is_correct,answered_at,id',user_id:'eq.'+user.id,question_id:'in.('+visible.map(r=>r.id).join(',')+')',order:'answered_at.desc,id.desc',limit:'10000'})):[];
+      const latest=new Map();for(const a of attemptRows)if(!latest.has(a.question_id))latest.set(a.question_id,a);
+      return send(res,200,{items:visible.map(x=>({id:x.id,subject:x.subject,topic:x.topic,board:x.board,
+        year:x.exam_year,type:x.data?.type||'multiple_choice',preview:x.statement.slice(0,250),hasKey:x.has_key,hasCommentary:x.has_commentary, lastAttempt:latest.get(x.id)?{choice:latest.get(x.id).choice,isCorrect:latest.get(x.id).is_correct}:null,alternatives:x.data?.alternatives||[],statement:x.data?.statement||x.statement,exam:x.data?.exam||''})),page,hasMore:rows.length>MAX_PAGE});
     }
     if(op==='question'&&parts.length===2&&req.method==='GET'){
       const row=await questionById(parts[1]);

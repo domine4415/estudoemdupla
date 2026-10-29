@@ -13,3 +13,30 @@ a.brand{text-decoration:none}.bank-topbar{gap:14px}.bank-nav{display:flex;align-
 .stats-track{width:100%;height:9px;border-radius:20px;background:#304158;overflow:hidden}
 .stats-track-fill{height:100%;border-radius:20px;background:#9debb6}
 @media(max-width:720px){.bank-layout{grid-template-columns:1fr}.bank-question{grid-column:1}.bank-nav-button{padding:9px 5px}}
+
+/* V3: 10 questões completas e navegação retrátil */
+.bank-main{margin-left:76px;max-width:none;transition:margin-left .23s ease}
+.side-nav{position:fixed;left:0;top:0;bottom:0;width:70px;background:#101c2c;border-right:1px solid #2c4158;z-index:90;display:flex;flex-direction:column;gap:12px;padding:22px 10px;overflow:hidden;transition:width .23s ease;box-shadow:3px 0 15px #0002}
+.side-nav:hover,.side-nav:focus-within{width:250px}
+.side-brand,.side-link{height:49px;min-height:49px;display:flex;align-items:center;gap:16px;color:#dbe7f8;text-decoration:none;border:0;background:transparent;white-space:nowrap;font:inherit;font-weight:650;font-size:14px;padding:5px 12px;border-radius:11px;text-align:left;cursor:pointer}
+.side-brand{color:#aff0bd;margin-bottom:28px}.side-link:hover,.side-link.selected{background:#22384e;color:#a8eebd}
+.side-icon{width:27px;flex-shrink:0;text-align:center;font-size:22px}.side-label{opacity:0;transition:opacity .18s}.side-nav:hover .side-label,.side-nav:focus-within .side-label{opacity:1}
+.side-user{margin-top:auto;color:#9bb0c6;font-size:10px;overflow-wrap:anywhere;opacity:0}.side-nav:hover .side-user{opacity:1}
+.mobile-menu{display:none}.menu-shade[hidden]{display:none}
+.bank-hero{margin-top:8px}.bank-layout{grid-template-columns:minmax(210px,300px) minmax(0,1fr)}
+.bank-results{padding:28px}.bank-filter{position:sticky;top:12px}.bank-results .bank-cards{gap:25px}
+.inline-question{border:1px solid #30445d;background:#132036;border-radius:16px;padding:25px 24px;min-width:0}
+.inline-header{display:flex;align-items:center;justify-content:space-between;gap:15px;flex-wrap:wrap}
+.inline-question .statement{margin:24px 0;line-height:1.8;white-space:pre-wrap;font-size:16px;color:#ebf0f7}
+.inline-question .answer-options{display:flex;flex-direction:column;gap:10px}.inline-question .answer{width:100%;text-align:left}
+.inline-question .question-number{font-size:12px;font-weight:800;color:#a8edbb;margin-bottom:16px}
+.inline-question .past-answer{display:none;margin:20px 0;padding:11px 13px;background:#243447;color:#e4dcb8;border-radius:10px;font-size:12px}
+.inline-question .past-answer.visible{display:block}
+.question-separator{height:1px;background:#31445c;margin-top:24px}
+.bank-results .list-head h2{margin-bottom:10px}
+.bank-results .pager{position:sticky;bottom:10px;background:#101c2ce8;padding:14px;border:1px solid #31445c;border-radius:13px;z-index:2}
+@media(max-width:850px){.bank-layout{grid-template-columns:1fr}.bank-filter{position:static}}
+@media(max-width:720px){.bank-main{margin-left:0;padding:65px 12px 32px}.side-nav{transform:translateX(-110%);width:min(290px,85vw);transition:transform .2s;z-index:101}.side-nav.open{transform:translateX(0)}.side-nav .side-label,.side-nav .side-user{opacity:1}.side-nav:hover{width:min(290px,85vw)}.mobile-menu{position:fixed;display:block;top:13px;left:13px;z-index:100;border:1px solid #40536a;border-radius:10px;color:#b2f4c3;background:#17263b;font-size:22px;padding:8px 15px}.menu-shade:not([hidden]){position:fixed;inset:0;background:#0009;z-index:99}.bank-results{padding:15px}.inline-question{padding:17px 14px}.inline-question .statement{font-size:15px}}
+
+/* Banco abre direto nas questões; métricas detalhadas ficam na seção Estatísticas */
+.bank-hero{margin:4px 0 14px}.bank-hero>div{display:none}#pageBody>.bank-stats{display:none}

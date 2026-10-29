@@ -8,10 +8,15 @@
 <script src="/bank.js" defer></script>
 </head>
 <body>
-<header class="topbar bank-topbar">
- <a class="brand" href="/" aria-label="Voltar à página inicial"><span class="brand-mark">✦</span><span>ESTUDO<span class="brand-secondary"> EM DUPLA</span></span></a>
- <nav class="bank-nav"><a class="bank-nav-link active" href="/banco">Banco de questões</a><button id="statsToggle" type="button" class="bank-nav-link bank-nav-button">Estatísticas</button><a class="bank-nav-link" href="/">Salas ao vivo</a><span id="who" class="bank-who"></span></nav>
-</header>
+<button id="mobileMenu" class="mobile-menu" type="button" aria-label="Abrir navegação" aria-controls="sideNav" aria-expanded="false">☰</button>
+<nav id="sideNav" class="side-nav" aria-label="Navegação principal">
+ <a class="side-brand" href="/"><span class="side-icon">✦</span><span class="side-label">ESTUDO EM DUPLA</span></a>
+ <a class="side-link selected" href="/banco" data-nav="bank"><span class="side-icon">📚</span><span class="side-label">Banco de questões</span></a>
+ <button id="statsToggle" class="side-link" type="button" data-nav="stats"><span class="side-icon">📊</span><span class="side-label">Estatísticas</span></button>
+ <a class="side-link" href="/" data-nav="rooms"><span class="side-icon">👥</span><span class="side-label">Salas ao vivo</span></a>
+ <div class="side-user" id="who"></div>
+</nav>
+<div id="menuShade" class="menu-shade" hidden></div>
 <main class="bank-main">
  <div id="loginRequired" class="bank-login panel hidden"><h2>Entre na sua conta para estudar</h2><p>O banco de questões guarda as suas respostas individualmente.</p><a class="btn btn-primary" href="/">Fazer login →</a></div>
  <div id="pageBody" class="hidden">
@@ -39,7 +44,7 @@
         <button id="clearFilter" class="btn btn-soft btn-full">Limpar filtros</button>
         <p class="filter-note">O gabarito e o comentário aparecem após você responder. Seu histórico fica salvo na sua conta.</p>
       </aside>
-      <section class="panel bank-results"><div class="list-head"><div><div class="eyebrow">BANCO DE QUESTÕES</div><h2>Lista de questões</h2></div><span id="pageDisplay" class="tiny muted"></span></div>
+      <section class="panel bank-results"><div class="list-head"><div><div class="eyebrow">RESOLVA DIRETAMENTE</div><h2>Questões</h2></div><span id="pageDisplay" class="tiny muted"></span></div>
         <p id="listMessage" class="bank-note">Carregando...</p><div id="questionCards" class="bank-cards"></div>
         <div class="pager"><button id="previousPage" class="btn btn-soft" type="button">← Anterior</button><button id="nextPage" class="btn btn-soft" type="button">Próxima →</button></div>
       </section>

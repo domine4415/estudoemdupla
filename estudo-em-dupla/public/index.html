@@ -8,7 +8,7 @@
 <link rel="stylesheet" href="/styles.css" />
 <script src="/app.js" defer></script>
 </head>
-<body>
+<body><button class="home-menu-button" id="homeMenuButton" aria-label="Abrir navegação">☰</button><nav class="home-side-nav" id="homeSideNav" aria-label="Navegação"><a href="/banco"><span>📚</span><b>Banco de questões</b></a><a href="/banco#estatisticas"><span>📊</span><b>Estatísticas</b></a><a href="/"><span>👥</span><b>Salas ao vivo</b></a></nav><script>document.addEventListener('DOMContentLoaded',()=>{const b=document.getElementById('homeMenuButton');b.onclick=()=>document.getElementById('homeSideNav').classList.toggle('open')})</script>
 <header class="topbar">
   <div class="brand"><span class="brand-mark">✦</span><span>ESTUDO<span class="brand-secondary"> EM DUPLA</span></span></div>
   <div id="accountBar" class="account-bar hidden"><span id="accountEmail"></span><button id="logout" class="btn btn-small btn-soft">Sair da conta</button></div>
