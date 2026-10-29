@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="theme-color" content="#0a1020" />
+<title>Estudo em Dupla • Seu simulado, juntos</title>
+<link rel="stylesheet" href="/styles.css" />
+<script src="/app.js" defer></script>
+</head>
+<body>
+<header class="topbar">
+  <div class="brand"><span class="brand-mark">✦</span><span>ESTUDO<span class="brand-secondary"> EM DUPLA</span></span></div>
+  <div id="topRoom" class="top-room hidden"><span class="live-dot"></span> SALA <strong id="roomCode"></strong><button id="copyLink" class="btn btn-small btn-soft">Copiar link</button></div>
+</header>
+<main>
+  <div id="landing" class="landing">
+    <div class="hero-eyebrow">ESTUDE PARA CONCURSOS COM UM AMIGO</div>
+    <h1>Uma questão.<br /><span>Duas respostas.</span></h1>
+    <p class="hero-desc">Importe seu arquivo JSON, organize as questões automaticamente e resolva em dupla, em tempo real.</p>
+    <p id="serverNotice" class="server-notice hidden" role="alert"></p>
+    <div class="landing-panels">
+      <section class="panel landing-card">
+        <div class="card-icon">▣</div>
+        <h2>Criar sala de estudos</h2>
+        <p>Você controla as questões no computador. Seu amigo entra pelo celular.</p>
+        <label for="hostName">Seu nome</label>
+        <input id="hostName" placeholder="Ex.: Dom" maxlength="30" value="Eu" />
+        <button id="createRoom" class="btn btn-primary btn-full">Criar sala <span>→</span></button>
+      </section>
+      <section class="panel landing-card">
+        <div class="card-icon">◎</div>
+        <h2>Entrar com um código</h2>
+        <p>Seu amigo enviou um link ou um código de sala? Entre por aqui.</p>
+        <label for="joinName">Seu nome</label>
+        <input id="joinName" placeholder="Ex.: Rafael" maxlength="30" />
+        <label for="joinCode">Código da sala</label>
+        <input id="joinCode" placeholder="Ex.: A7K3PL" maxlength="6" autocapitalize="characters" />
+        <button id="joinRoom" class="btn btn-outline btn-full">Entrar na sala <span>→</span></button>
+      </section>
+    </div>
+  </div>
+
+  <div id="workspace" class="workspace hidden">
+    <aside class="sidebar panel" id="sidebar">
+      <div class="sidebar-head"><div class="eyebrow">SALA DE ESTUDOS</div><h2 id="roomTitle">Sua sessão</h2><div id="memberStatus" class="member-status">Aguardando participante...</div></div>
+      <div class="host-only" id="uploadArea">
+        <div id="dropZone" class="drop-zone" tabindex="0"><span class="upload-icon">⇧</span><strong>Importar questões</strong><span>Arraste seu arquivo JSON ou clique aqui</span><small>Enunciados e alternativas serão organizados automaticamente</small><input id="jsonFile" type="file" accept=".json,application/json" aria-label="Selecionar arquivo JSON"></div>
+        <div id="importMessage" class="hint"></div>
+        <button id="exportJson" class="btn btn-soft btn-full hidden">Baixar JSON organizado</button>
+      </div>
+      <div class="sidebar-list-top"><div class="eyebrow">QUESTÕES <span id="questionTotal">0</span></div><div class="muted tiny">Clique para navegar</div></div>
+      <div id="questionList" class="question-list"><p class="empty-sidebar">Importe um JSON para começar.</p></div>
+      <div class="sidebar-footer"><button id="exitRoom" class="btn btn-ghost">Sair desta sala</button></div>
+    </aside>
+
+    <section class="content">
+      <div class="session-head panel"><div><div class="eyebrow">SIMULADO EM DUPLA</div><div class="session-subtitle" id="sessionSubtitle">Aguardando questões...</div></div><div class="session-score"><div><strong id="scoreHost">0</strong><small id="scoreHostName">Você</small></div><span>×</span><div><strong id="scoreGuest">0</strong><small id="scoreGuestName">Amigo</small></div></div></div>
+
+      <section id="emptyState" class="panel empty-main"><div class="empty-symbol">◈</div><h2>Sua sala está pronta!</h2><p id="emptyDescription">Importe o JSON que você já captura do TEC e as questões aparecerão aqui organizadas.</p></section>
+
+      <section id="questionArea" class="panel question-area hidden">
+        <div class="question-top"><div class="eyebrow" id="questionNumber">QUESTÃO 01</div><span id="questionType" class="pill">MÚLTIPLA ESCOLHA</span></div>
+        <div class="question-meta" id="questionMeta"></div>
+        <h2 class="question-heading">Leia e marque a alternativa</h2>
+        <div class="statement" id="questionStatement"></div>
+        <div id="answerOptions" class="answer-options"></div>
+        <div id="incompleteNotice" class="notice warning hidden">A extração não trouxe alternativas suficientes. O criador da sala pode editar esta questão antes de responder.</div>
+        <div id="feedback" class="feedback hidden"></div>
+        <div class="host-only host-tools">
+          <div class="tool-line"><button id="editQuestion" class="btn btn-soft btn-small">Editar questão</button><a id="originalLink" href="#" target="_blank" rel="noopener noreferrer" class="source-link hidden">Abrir no TEC ↗</a></div>
+          <div class="answer-key"><label for="keySelect">Gabarito (opcional)</label><select id="keySelect"><option value="">Não informado no JSON</option></select><small>O gabarito não é inventado: você pode informar depois de conferir.</small></div>
+          <div class="nav-buttons"><button id="prevQuestion" class="btn btn-soft">← Anterior</button><button id="revealAnswers" class="btn btn-outline">Revelar respostas</button><button id="nextQuestion" class="btn btn-primary">Próxima →</button></div>
+        </div>
+      </section>
+    </section>
+    <aside class="stats panel"><div class="eyebrow">RESPOSTAS DA DUPLA</div><h2>Ao vivo</h2>
+      <div class="player-status"><span class="avatar">1</span><span><strong id="playerOneName">Você</strong><small id="playerOneState">Ainda não respondeu</small></span><span id="playerOneIcon" class="status-icon">○</span></div>
+      <div class="player-status"><span class="avatar alt">2</span><span><strong id="playerTwoName">Amigo</strong><small id="playerTwoState">Aguardando entrar</small></span><span id="playerTwoIcon" class="status-icon">○</span></div>
+      <div class="mini-divider"></div>
+      <div class="stats-note" id="resultExplanation">Cada pessoa marca sua resposta sem ver a escolha da outra. Quando os dois responderem, as escolhas aparecem.</div>
+      <div class="stats-bottom"><div class="eyebrow">DESEMPENHO</div><div id="scoreDetail" class="tiny muted">A pontuação aparece quando houver gabarito e respostas reveladas.</div></div>
+    </aside>
+  </div>
+</main>
+<div id="toast" class="toast hidden" role="status"></div>
+<dialog id="editDialog" class="modal">
+  <form id="editForm"><div class="modal-title"><h2>Editar questão</h2><button type="button" id="closeDialog" class="btn btn-ghost">Fechar ✕</button></div>
+    <label for="editStatement">Enunciado</label><textarea id="editStatement" rows="8" required></textarea>
+    <label>Alternativas (uma por linha, formato A) texto)</label><textarea id="editAlternatives" rows="7" placeholder="A) Primeira alternativa&#10;B) Segunda alternativa"></textarea>
+    <div class="modal-actions"><button type="submit" class="btn btn-primary">Salvar correção</button></div>
+  </form>
+</dialog>
+</body>
+</html>

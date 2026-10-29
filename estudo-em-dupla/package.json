@@ -1,0 +1,8 @@
+{
+  "name":"estudo-em-dupla",
+  "version":"1.0.0",
+  "private":true,
+  "description":"Organizador de questões JSON e simulado sincronizado para duas pessoas",
+  "scripts":{"start":"node server.js"},
+  "engines":{"node":">=20"}
+}
