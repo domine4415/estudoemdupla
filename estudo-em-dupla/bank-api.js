@@ -27,11 +27,11 @@ function normalize(q){
     statement, alternatives, type:q.type==='true_false'?'true_false':'multiple_choice',
     correct:normalizedCorrect,
     commentary:trimmed(q.commentary||q.explanation||q.comentario,12000),
-    subject:trimmed(q.subject,180)||'Não classificada',
-    topic:trimmed(q.topic||q.assunto,180)||'Geral',
-    board:trimmed(q.board,120),exam:trimmed(q.exam,250),
+    subject:trimmed(q.subject??q.metadata?.subject,180)||'Não classificada',
+    topic:trimmed(q.topic||q.assunto||q.metadata?.topic,180)||'Geral',
+    board:trimmed(q.board??q.metadata?.board,120),exam:trimmed(q.exam??q.metadata?.contest,250),
     year:Number.isInteger(year)&&year>=1900&&year<=2100?String(year):'',
-    originalId,link:trimmed(q.link,600)
+    originalId,link:trimmed(q.link??q.sourceUrl,600)
   };
 }
 function fingerprint(q){
