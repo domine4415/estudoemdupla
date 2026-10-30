@@ -51,3 +51,21 @@ body{background:radial-gradient(ellipse 55% 35% at 53% 0%,rgba(59,120,102,.12),t
 .btn{transition:transform .16s ease,box-shadow .16s ease,filter .16s ease}.btn:not(:disabled):hover{transform:translateY(-2px);filter:brightness(1.07);box-shadow:0 9px 22px #0003}.btn:not(:disabled):active{transform:scale(.96)}
 @media(max-width:720px){.home-actions{grid-template-columns:1fr;gap:12px;margin-top:25px}.home-action{min-height:96px;padding:15px}.action-icon{width:46px;height:46px;flex-basis:46px}.action-copy strong{font-size:15px}.landing{padding:22px 0}.room-quick-nav{gap:0}.room-quick-nav a{width:30px;height:30px}.room-quick-nav svg{width:18px;height:18px}.topbar .brand-secondary{display:none}.topbar .account-bar{gap:6px}.topbar .account-bar span{display:none}}
 @media(prefers-reduced-motion:reduce){.home-action,.home-action:before,.btn,.action-arrow svg{transition:none!important}.home-create-panel{animation:none}}
+
+/* Duplo clique: eliminar alternativa sem responder. */
+.answer.eliminated:not(.correct):not(.wrong){opacity:.53;border-color:#526071;background:#101a29;}
+.answer.eliminated:not(.correct):not(.wrong) .answer-label{text-decoration:line-through;text-decoration-thickness:2px;text-decoration-color:#e69a9a;}
+.answer.eliminated:not(.correct):not(.wrong) .letter{opacity:.65;}
+
+/* V6: comentário do professor nas salas após revelação das respostas */
+.room-answer-summary{white-space:pre-line;font-weight:700;font-size:13px;color:#c8f5d6;line-height:1.8}
+.room-commentary{border-top:1px solid #436453;margin-top:18px;padding-top:17px;line-height:1.85;color:#e8f2fb;font-size:14px}
+.room-commentary-label{letter-spacing:1.6px;font-size:10px;font-weight:800;color:#a2efb5;margin-bottom:13px}
+.room-commentary h3{font-size:16px;color:#a2efb5;margin:22px 0 9px;font-weight:800}
+.room-commentary h4{font-size:14px;color:#a2efb5;margin:16px 0 7px;font-weight:750}
+.room-commentary p{margin:8px 0 11px;overflow-wrap:anywhere}
+.room-commentary strong{color:#d0ffe0;font-weight:800}
+.room-commentary mark{color:#0d2a1b;background:#a2efb5;padding:1px 4px;border-radius:4px;box-decoration-break:clone;-webkit-box-decoration-break:clone}
+.room-commentary u{text-underline-offset:3px;text-decoration-color:#a2efb5}
+.room-commentary code{color:#d6ffe1;border:1px solid #456958;border-radius:4px;padding:1px 4px}
+.room-no-comment{margin:12px 0 0;color:#a8b9c6}

@@ -1,17 +1,7 @@
-# Correção das fórmulas LaTeX — Estudo em Dupla
+# Exibir comentários nas salas — atualização pontual
 
-Esta atualização é **aditiva**: não substitua seus arquivos atuais `bank.js`, `app.js`, `bank.html` ou `index.html` por versões antigas.
+Substitua os arquivos `public/app.js` e `public/styles.css` no repositório GitHub (pasta `estudo-em-dupla`).
 
-1. Envie o arquivo `public/math-support.js` para a pasta `estudo-em-dupla/public/` do repositório GitHub.
-2. No arquivo `estudo-em-dupla/public/bank.html`, adicione antes de `</head>`:
+A atualização usa o comentário já presente nas questões importadas. O servidor somente envia o comentário quando a questão está com respostas reveladas; o convidado também o recebe. A caixa abaixo das alternativas passa a mostrar um resumo do resultado e a seção **COMENTÁRIO DO PROFESSOR**, interpretando `##`, `###`, `**negrito**`, `==grifo==` e `__sublinhado__` como texto seguro.
 
-   `<script src="/math-support.js" defer></script>`
-
-3. Faça o mesmo em `estudo-em-dupla/public/index.html`.
-4. Faça commit; aguarde o Render publicar; pressione Ctrl+F5.
-
-Funciona para fórmulas LaTeX que venham delimitadas por `\\(...\\)`, `\\[...\\]` ou `$$...$$`. Exemplos: `\\(p \\leftrightarrow q\\)`, `\\(p \\vee q\\)`, `\\(\\neg p\\)`.
-
-Não corrige automaticamente LaTeX malformado ou texto que contenha apenas comandos soltos sem delimitadores. No JSON, preserve as barras invertidas escapadas, como `"\\\\(p \\\\vee q\\\\)"`.
-
-A renderização utiliza KaTeX via CDN, portanto requer conexão e que o navegador consiga carregar arquivos de cdn.jsdelivr.net. Caso o CDN esteja bloqueado, o texto original permanece visível.
+Se a questão não tem comentário, aparece um aviso. Não precisa alterar o Supabase ou rodar SQL. Teste depois do Render chegar a Live, com Ctrl+F5. A atualização parte do ZIP anterior de riscar alternativas; se você adicionou outras mudanças a app.js/styles.css desde então, mescle as alterações em vez de substituir cegamente.

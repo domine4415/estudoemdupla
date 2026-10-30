@@ -1,4 +1,26 @@
 'use strict';
+
+// Um clique confirma a resposta; dois cliques rápidos riscam/desriscam a alternativa.
+// O pequeno intervalo evita registrar uma resposta no primeiro clique de um duplo clique.
+function enableElimination(button, onSingleClick){
+  let pending=null;
+  button.addEventListener('click',()=>{
+    if(button.disabled)return;
+    if(pending!==null){
+      clearTimeout(pending);pending=null;
+      button.classList.toggle('eliminated');
+      button.setAttribute('aria-label', (button.classList.contains('eliminated')?'Alternativa eliminada: ':'Alternativa restaurada: ')+button.textContent.trim());
+      return;
+    }
+    if(button.classList.contains('eliminated')){
+      button.classList.remove('eliminated');
+      button.removeAttribute('aria-label');
+      return;
+    }
+    pending=setTimeout(()=>{pending=null;if(!button.disabled)onSingleClick();},320);
+  });
+  button.addEventListener('dblclick',e=>e.preventDefault());
+}
 // Tela de resolução individual. O conteúdo importado aparece sempre como texto.
 const $=id=>document.getElementById(id);
 let admin=false, filters={subjects:[],pairs:[],boards:[],years:[]},page=1,hasMore=false;
@@ -63,10 +85,10 @@ function renderInlineQuestion(r){
  for(const alt of r.alternatives||[]){
    const b=elt('button','answer');b.type='button';b.dataset.choice=alt.letter;b.append(elt('span','letter',alt.letter),elt('span','answer-label',alt.text));
    b.disabled=Boolean(resolved);
-   b.onclick=withAsync(b,async()=>{opts.querySelectorAll('button').forEach(x=>x.disabled=true);
+   enableElimination(b,withAsync(b,async()=>{opts.querySelectorAll('button').forEach(x=>x.disabled=true);
      try{const result=await api('bank/answer','POST',{id:r.id,choice:alt.letter});responseCache.set(r.id,{choice:alt.letter,isCorrect:result.isCorrect,generation:filterGeneration,result});displayAnswer(result);loadProgress();}
      catch(e){opts.querySelectorAll('button').forEach(x=>x.disabled=false);throw e;}
-   });opts.append(b);
+   }));opts.append(b);
  }
  if(resolved && prior.result)displayAnswer(prior.result);
  else if(resolved){api('bank/question/'+r.id).then(d=>{if(card.isConnected && responseCache.get(r.id)?.generation===filterGeneration){const result={choice:prior.choice,correct:d.question.correct,isCorrect:prior.isCorrect,commentary:d.question.commentary};responseCache.set(r.id,{...prior,result});displayAnswer(result);}}).catch(()=>{});}
@@ -123,9 +145,9 @@ function renderCurrent(){
   for(const alt of q.alternatives){
     const b=elt('button','answer');b.type='button';b.dataset.choice=alt.letter;
     b.append(elt('span','letter',alt.letter),elt('span','answer-label',alt.text));
-    b.onclick=withAsync(b,async()=>{for(const btn of list.querySelectorAll('button'))btn.disabled=true;
+    enableElimination(b,withAsync(b,async()=>{for(const btn of list.querySelectorAll('button'))btn.disabled=true;
       try{const result=await api('bank/answer','POST',{id:q.id,choice:alt.letter});showFeedback(result);}catch(e){for(const btn of list.querySelectorAll('button'))btn.disabled=false;throw e;}
-    });
+    }));
     list.append(b);
   }
   if(q.lastAttempt && q.correct){

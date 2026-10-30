@@ -58,3 +58,8 @@ a.brand{text-decoration:none}.bank-topbar{gap:14px}.bank-nav{display:flex;align-
 .rich-comment mark{background:rgba(160,239,178,.24);color:#e8ffe9;border-bottom:2px solid #a0eeb2;padding:0 .13em;border-radius:3px}
 .rich-comment u{text-decoration-color:#a0eeb2;text-underline-offset:3px}
 .rich-comment .empty-comment-line{min-height:.4em}
+
+/* Duplo clique: eliminar alternativa sem responder. */
+.answer.eliminated:not(.correct):not(.wrong){opacity:.53;border-color:#526071;background:#101a29;}
+.answer.eliminated:not(.correct):not(.wrong) .answer-label{text-decoration:line-through;text-decoration-thickness:2px;text-decoration-color:#e69a9a;}
+.answer.eliminated:not(.correct):not(.wrong) .letter{opacity:.65;}

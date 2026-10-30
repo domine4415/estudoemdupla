@@ -1,0 +1,16 @@
+ATUALIZAÇÃO — DUPLO CLIQUE PARA RISCAR ALTERNATIVAS
+
+No GitHub, na pasta estudo-em-dupla/public, substitua:
+- bank.js
+- app.js
+- bank.css
+- styles.css
+
+Um clique: envia a resposta após 320 ms.
+Dois cliques rápidos na mesma alternativa: risca ou desrisca sem responder.
+Clicar uma vez em uma alternativa riscada: remove o risco (não envia resposta).
+A marcação de eliminação é temporária; não é gravada no Supabase.
+
+ATENÇÃO: se você alterou esses arquivos após a V5 (como ajustes de fórmulas), compare antes de substituir, para não sobrescrever outras personalizações.
+
+Teste o Banco de Questões e Salas após publicação no Render.

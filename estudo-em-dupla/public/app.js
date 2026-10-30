@@ -1,4 +1,26 @@
 'use strict';
+
+// Um clique confirma a resposta; dois cliques rápidos riscam/desriscam a alternativa.
+// O pequeno intervalo evita registrar uma resposta no primeiro clique de um duplo clique.
+function enableElimination(button, onSingleClick){
+  let pending=null;
+  button.addEventListener('click',()=>{
+    if(button.disabled)return;
+    if(pending!==null){
+      clearTimeout(pending);pending=null;
+      button.classList.toggle('eliminated');
+      button.setAttribute('aria-label', (button.classList.contains('eliminated')?'Alternativa eliminada: ':'Alternativa restaurada: ')+button.textContent.trim());
+      return;
+    }
+    if(button.classList.contains('eliminated')){
+      button.classList.remove('eliminated');
+      button.removeAttribute('aria-label');
+      return;
+    }
+    pending=setTimeout(()=>{pending=null;if(!button.disabled)onSingleClick();},320);
+  });
+  button.addEventListener('dblclick',e=>e.preventDefault());
+}
 // Todas as informações trazidas do JSON são renderizadas como texto (nunca HTML externo).
 const $ = id => document.getElementById(id);
 let code=null,token=null,role=null,view=null,es=null,lastImported=null,toastTimer=null;
@@ -131,6 +153,28 @@ async function importFile(file){
   }catch(e){$('importMessage').textContent='Não foi possível importar.';alertUser('Falha ao ler arquivo: '+e.message,true);}
 }
 function div(className,text){const el=document.createElement('div');if(className)el.className=className;el.textContent=text;return el;}
+// Comentários importados: Markdown restrito e seguro (sem innerHTML).
+function renderRoomCommentary(value){
+  const root=document.createElement('section');root.className='room-commentary';
+  const title=document.createElement('div');title.className='room-commentary-label';title.textContent='COMENTÁRIO DO PROFESSOR';root.append(title);
+  const lines=String(value||'').split(/\r?\n/);
+  for(const line of lines){
+    const str=line.trim();
+    if(!str)continue;
+    const level=str.startsWith('### ')?3:str.startsWith('## ')?2:0;
+    const p=document.createElement(level===2?'h3':level===3?'h4':'p');
+    const content=level?str.replace(/^#{2,3}\s+/, ''):str;
+    const rx=/(\*\*([^*\n]+)\*\*|==([^=\n]+)==|__([^_\n]+)__|`([^`\n]+)`)/g;
+    let pos=0,m;
+    while((m=rx.exec(content))!==null){
+      p.append(document.createTextNode(content.slice(pos,m.index)));
+      const t=document.createElement(m[2]?'strong':m[3]?'mark':m[4]?'u':'code');
+      t.textContent=m[2]||m[3]||m[4]||m[5];p.append(t);pos=rx.lastIndex;
+    }
+    p.append(document.createTextNode(content.slice(pos)));root.append(p);
+  }
+  return root;
+}
 function render(q){
   if(q.isOpen===false){leaveRoom('Esta sala foi encerrada pelo administrador.');return;}
   $('questionTotal').textContent=q.questionsCount;
@@ -162,7 +206,7 @@ function render(q){
     if(selected)b.classList.add('selected');
     if(q.revealed&&data.correct){if(opt.letter===data.correct)b.classList.add('correct');else if(selected)b.classList.add('wrong');}
     b.append(div('letter',opt.letter),div('answer-label',opt.text));
-    b.disabled=q.revealed;b.onclick=()=>command('answer',{choice:opt.letter,index:q.index});parent.append(b);
+    b.disabled=q.revealed;enableElimination(b,()=>command('answer',{choice:opt.letter,index:q.index}));parent.append(b);
   }
   $('incompleteNotice').classList.toggle('hidden',!data.needsReview);
   $('feedback').classList.toggle('hidden',!q.revealed);
@@ -171,8 +215,10 @@ function render(q){
     let t=`${q.hostName}: ${a.host||'não respondeu'} • ${q.guestName||'Amigo'}: ${a.guest||'não respondeu'}`;
     if(data.correct)t+='\nGabarito: '+data.correct;
     else t+='\nGabarito não informado. Compare as respostas e confira a questão original.';
-    if(data.commentary)t+='\n\nComentário: '+data.commentary;
-    $('feedback').textContent=t;
+    const box=$('feedback');box.replaceChildren();
+    const resultText=document.createElement('div');resultText.className='room-answer-summary';resultText.textContent=t;box.append(resultText);
+    if(data.commentary && String(data.commentary).trim())box.append(renderRoomCommentary(data.commentary));
+    else {const missing=document.createElement('p');missing.className='room-no-comment';missing.textContent='Esta questão ainda não possui comentário explicativo.';box.append(missing);}
   }
   if(role==='host'){
     $('prevQuestion').disabled=q.index===0;$('nextQuestion').disabled=q.index>=q.questionsCount-1;
