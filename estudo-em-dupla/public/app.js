@@ -1,25 +1,38 @@
 'use strict';
 
-// Um clique confirma a resposta; dois cliques rápidos riscam/desriscam a alternativa.
-// O pequeno intervalo evita registrar uma resposta no primeiro clique de um duplo clique.
-function enableElimination(button, onSingleClick){
+// Os riscos ficam armazenados por questão e por navegador (não alteram o gabarito).
+// O HTML é reconstruído a cada atualização da sala, por isso a classe sozinha não bastava.
+const eliminationMemory = new Map();
+function eliminationStoreKey(questionKey){return 'dupla_riscos_v2:'+questionKey;}
+function readElimination(questionKey){
+  if(eliminationMemory.has(questionKey))return eliminationMemory.get(questionKey);
+  let entries=[];
+  try{entries=JSON.parse(sessionStorage.getItem(eliminationStoreKey(questionKey))||'[]');}catch{}
+  const set=new Set(Array.isArray(entries)?entries:[]);
+  eliminationMemory.set(questionKey,set);return set;
+}
+function enableElimination(button,onSingleClick,questionKey,letter){
+  const removed=readElimination(questionKey);
+  const sync=()=>{
+    const crossed=removed.has(letter);
+    button.classList.toggle('eliminated',crossed);
+    if(crossed)button.setAttribute('aria-label','Alternativa eliminada: '+button.textContent.trim());
+    else button.removeAttribute('aria-label');
+    try{sessionStorage.setItem(eliminationStoreKey(questionKey),JSON.stringify([...removed]));}catch{}
+  };
+  sync();
   let pending=null;
   button.addEventListener('click',()=>{
     if(button.disabled)return;
     if(pending!==null){
       clearTimeout(pending);pending=null;
-      button.classList.toggle('eliminated');
-      button.setAttribute('aria-label', (button.classList.contains('eliminated')?'Alternativa eliminada: ':'Alternativa restaurada: ')+button.textContent.trim());
-      return;
+      removed.has(letter)?removed.delete(letter):removed.add(letter);
+      sync();return;
     }
-    if(button.classList.contains('eliminated')){
-      button.classList.remove('eliminated');
-      button.removeAttribute('aria-label');
-      return;
-    }
+    if(removed.has(letter)){removed.delete(letter);sync();return;}
     pending=setTimeout(()=>{pending=null;if(!button.disabled)onSingleClick();},320);
   });
-  button.addEventListener('dblclick',e=>e.preventDefault());
+  button.addEventListener('dblclick',event=>event.preventDefault());
 }
 // Todas as informações trazidas do JSON são renderizadas como texto (nunca HTML externo).
 const $ = id => document.getElementById(id);
@@ -206,7 +219,7 @@ function render(q){
     if(selected)b.classList.add('selected');
     if(q.revealed&&data.correct){if(opt.letter===data.correct)b.classList.add('correct');else if(selected)b.classList.add('wrong');}
     b.append(div('letter',opt.letter),div('answer-label',opt.text));
-    b.disabled=q.revealed;enableElimination(b,()=>command('answer',{choice:opt.letter,index:q.index}));parent.append(b);
+    b.disabled=q.revealed;enableElimination(b,()=>command('answer',{choice:opt.letter,index:q.index}),`${code}:${role}:${q.index}:${data.id||data.statement}`,opt.letter);parent.append(b);
   }
   $('incompleteNotice').classList.toggle('hidden',!data.needsReview);
   $('feedback').classList.toggle('hidden',!q.revealed);

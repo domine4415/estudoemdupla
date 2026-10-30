@@ -1,25 +1,38 @@
 'use strict';
 
-// Um clique confirma a resposta; dois cliques rápidos riscam/desriscam a alternativa.
-// O pequeno intervalo evita registrar uma resposta no primeiro clique de um duplo clique.
-function enableElimination(button, onSingleClick){
+// Os riscos ficam armazenados por questão e por navegador (não alteram o gabarito).
+// O HTML é reconstruído a cada atualização da sala, por isso a classe sozinha não bastava.
+const eliminationMemory = new Map();
+function eliminationStoreKey(questionKey){return 'dupla_riscos_v2:'+questionKey;}
+function readElimination(questionKey){
+  if(eliminationMemory.has(questionKey))return eliminationMemory.get(questionKey);
+  let entries=[];
+  try{entries=JSON.parse(sessionStorage.getItem(eliminationStoreKey(questionKey))||'[]');}catch{}
+  const set=new Set(Array.isArray(entries)?entries:[]);
+  eliminationMemory.set(questionKey,set);return set;
+}
+function enableElimination(button,onSingleClick,questionKey,letter){
+  const removed=readElimination(questionKey);
+  const sync=()=>{
+    const crossed=removed.has(letter);
+    button.classList.toggle('eliminated',crossed);
+    if(crossed)button.setAttribute('aria-label','Alternativa eliminada: '+button.textContent.trim());
+    else button.removeAttribute('aria-label');
+    try{sessionStorage.setItem(eliminationStoreKey(questionKey),JSON.stringify([...removed]));}catch{}
+  };
+  sync();
   let pending=null;
   button.addEventListener('click',()=>{
     if(button.disabled)return;
     if(pending!==null){
       clearTimeout(pending);pending=null;
-      button.classList.toggle('eliminated');
-      button.setAttribute('aria-label', (button.classList.contains('eliminated')?'Alternativa eliminada: ':'Alternativa restaurada: ')+button.textContent.trim());
-      return;
+      removed.has(letter)?removed.delete(letter):removed.add(letter);
+      sync();return;
     }
-    if(button.classList.contains('eliminated')){
-      button.classList.remove('eliminated');
-      button.removeAttribute('aria-label');
-      return;
-    }
+    if(removed.has(letter)){removed.delete(letter);sync();return;}
     pending=setTimeout(()=>{pending=null;if(!button.disabled)onSingleClick();},320);
   });
-  button.addEventListener('dblclick',e=>e.preventDefault());
+  button.addEventListener('dblclick',event=>event.preventDefault());
 }
 // Tela de resolução individual. O conteúdo importado aparece sempre como texto.
 const $=id=>document.getElementById(id);
@@ -88,7 +101,7 @@ function renderInlineQuestion(r){
    enableElimination(b,withAsync(b,async()=>{opts.querySelectorAll('button').forEach(x=>x.disabled=true);
      try{const result=await api('bank/answer','POST',{id:r.id,choice:alt.letter});responseCache.set(r.id,{choice:alt.letter,isCorrect:result.isCorrect,generation:filterGeneration,result});displayAnswer(result);loadProgress();}
      catch(e){opts.querySelectorAll('button').forEach(x=>x.disabled=false);throw e;}
-   }));opts.append(b);
+   }),`banco:${r.id}`,alt.letter);opts.append(b);
  }
  if(resolved && prior.result)displayAnswer(prior.result);
  else if(resolved){api('bank/question/'+r.id).then(d=>{if(card.isConnected && responseCache.get(r.id)?.generation===filterGeneration){const result={choice:prior.choice,correct:d.question.correct,isCorrect:prior.isCorrect,commentary:d.question.commentary};responseCache.set(r.id,{...prior,result});displayAnswer(result);}}).catch(()=>{});}
@@ -147,7 +160,7 @@ function renderCurrent(){
     b.append(elt('span','letter',alt.letter),elt('span','answer-label',alt.text));
     enableElimination(b,withAsync(b,async()=>{for(const btn of list.querySelectorAll('button'))btn.disabled=true;
       try{const result=await api('bank/answer','POST',{id:q.id,choice:alt.letter});showFeedback(result);}catch(e){for(const btn of list.querySelectorAll('button'))btn.disabled=false;throw e;}
-    }));
+    }),`banco:${q.id}`,alt.letter);
     list.append(b);
   }
   if(q.lastAttempt && q.correct){
