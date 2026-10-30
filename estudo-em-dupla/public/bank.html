@@ -82,6 +82,15 @@
           <button id="moreDrafts" class="btn btn-soft btn-full hidden">Próxima página →</button>
         </div>
       </div>
+        <div class="panel admin-box" style="margin-top:18px"><h3>Exclusão de questões</h3>
+          <p class="bank-note">Exclusivo do administrador. A exclusão é irreversível e remove também as respostas vinculadas. Faça backup antes.</p>
+          <label for="deleteMode">Modo</label><select id="deleteMode"><option value="last">Última importação — somente questões novas do lote</option><option value="filters">Por disciplina e tópico</option></select>
+          <label for="deleteSubject">Disciplina (modo filtros)</label><select id="deleteSubject"><option value="">Selecione</option></select>
+          <label for="deleteTopic">Tópico</label><select id="deleteTopic"><option value="">Todos os tópicos</option></select>
+          <p id="deleteCount" class="bank-note">Confira a quantidade antes de excluir.</p>
+          <button id="deletePreview" class="btn btn-soft" type="button">Conferir quantidade</button>
+          <button id="deleteGroup" class="btn btn-outline" type="button">Excluir seleção…</button>
+        </div>
    </section>
  </div>
 </main>
@@ -93,7 +102,8 @@
   <label for="editStatement">Enunciado</label><textarea id="editStatement" rows="6" required></textarea>
   <label for="editAlternatives">Alternativas: uma por linha (A) texto)</label><textarea id="editAlternatives" rows="5" required></textarea>
   <label for="editCorrect">Gabarito</label><select id="editCorrect"><option value="">Ainda não verificado (rascunho)</option></select>
-  <label for="editCommentary">Comentário explicativo (você pode inserir um comentário criado e revisado por você)</label><textarea id="editCommentary" rows="7" placeholder="Explique por que a alternativa correta é correta e as demais não são..."></textarea>
+  <label for="editCommentary">Comentário explicativo — aceita Markdown: **negrito**, ==grifo==, ## título</label><textarea id="editCommentary" rows="7" placeholder="Explique por que a alternativa correta é correta e as demais não são..."></textarea>
+  <p class="bank-note">Formatação: <code>**negrito**</code> • <code>==grifo==</code> • <code>## Título</code> • <code>__sublinhado__</code>. O texto é exibido com segurança, sem executar HTML.</p>
   <label class="rights-line"><input type="checkbox" id="editPublished"><span>Publicar para os alunos (exige gabarito)</span></label>
   <div class="editor-actions"><button id="deleteQuestion" type="button" class="btn btn-outline">Excluir</button><button type="submit" class="btn btn-primary">Salvar questão</button></div>
  </form>

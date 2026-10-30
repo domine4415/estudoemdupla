@@ -49,3 +49,12 @@ a.brand{text-decoration:none}.bank-topbar{gap:14px}.bank-nav{display:flex;align-
 .bank-main{margin-left:78px}.bank-results .inline-question{transition:transform .2s,border-color .2s,box-shadow .2s}.inline-question:hover{border-color:#486a69;box-shadow:0 9px 26px #0002}
 .mobile-menu .hamburger-lines,.hamburger-lines:before,.hamburger-lines:after{display:block;width:19px;height:2px;background:#b6f3c9;position:relative;border-radius:3px;content:""}.hamburger-lines:before{position:absolute;top:-6px}.hamburger-lines:after{position:absolute;top:6px}
 @media(max-width:720px){.bank-main{margin-left:0}.mobile-menu{display:grid;place-items:center;width:43px;height:43px;padding:0;background:#1c3040;box-shadow:0 5px 20px #0006}.side-nav{width:min(290px,85vw);padding:19px 12px}.side-nav.open,.side-nav.open:hover{width:min(290px,85vw)}.side-nav .side-label{opacity:1}}
+
+/* Comentários didáticos com Markdown seguro */
+.rich-comment{line-height:1.75;font-size:1rem;white-space:normal}
+.rich-comment p{margin:.6em 0;white-space:pre-wrap}
+.rich-comment h3,.rich-comment h4{color:#a5e9be;margin:1.1em 0 .45em;line-height:1.3}
+.rich-comment strong{font-weight:800;color:#e7fff0}
+.rich-comment mark{background:rgba(160,239,178,.24);color:#e8ffe9;border-bottom:2px solid #a0eeb2;padding:0 .13em;border-radius:3px}
+.rich-comment u{text-decoration-color:#a0eeb2;text-underline-offset:3px}
+.rich-comment .empty-comment-line{min-height:.4em}

@@ -1,9 +1,33 @@
-# Atualização: evitar duplicação por código original
+# Estudo em Dupla — gerenciamento de exclusões e comentários formatados
 
-1. Antes da migração, faça backup/exportação das tabelas `dupla_bank_questions` e `dupla_bank_attempts` no Supabase. Recomenda-se um backup completo do projeto.
-2. Abra **Supabase > SQL Editor** e execute `ATIVAR_ID_UNICO.sql` **uma única vez**. Ele vincula as questões antigas pelos códigos de `data.originalId`; se houver registros duplicados com o mesmo código, mantém o mais antigo, transfere todas as tentativas para ele e exclui os duplicados.
-3. No GitHub, substitua `estudo-em-dupla/bank-api.js` e `estudo-em-dupla/public/bank.js` pelos dois arquivos incluídos nesta atualização.
-4. Faça commit, aguarde o Render ficar Live e recarregue a página com Ctrl+F5.
-5. Importe novamente um JSON cujo ID original seja numérico. O resultado da importação agora informa `created`, `updated` e `duplicatesInFile` na resposta da API. Questões com código já cadastrado são atualizadas, com o mesmo UUID e histórico de respostas.
+## Instalação
+1. Faça backup das tabelas `dupla_bank_questions` e `dupla_bank_attempts` do Supabase. A exclusão é irreversível e remove também tentativas de resposta associadas.
+2. No Supabase SQL Editor, execute `ATIVAR_EXCLUSAO_LOTES.sql` antes de publicar os arquivos.
+3. No GitHub, pasta `estudo-em-dupla`, substitua `bank-api.js`, `public/bank.js`, `public/bank.html` e `public/bank.css` pelos arquivos deste ZIP.
+4. Aguarde o Render concluir o deploy. Atualize o navegador com Ctrl+F5.
 
-Regras: código original primeiro; sem código, usa hash do enunciado. Código não numérico de questão manual fica sem ID original. Arquivos precisam ter autorização de uso/redistribuição. A migração é uma alteração real no banco: faça backup antes.
+## Exclusão
+- Questão individual: Administração > Revisar questões > Editar > Excluir.
+- Última importação: Administração > Exclusão de questões > Última importação > Conferir quantidade > Excluir seleção. Exclui somente **registros novos criados** pelo lote importado após esta atualização; registros antigos atualizados por reimportação ficam preservados.
+- Disciplina ou tópico: Administração > Exclusão de questões > Por disciplina e tópico > selecione a disciplina (obrigatória) e opcionalmente o tópico > Conferir quantidade > Excluir seleção.
+- É obrigatório digitar `EXCLUIR` para confirmar a exclusão em lote. Uma segunda conferência no servidor evita apagar uma quantidade que tenha mudado.
+- Não é possível apagar por "última importação" lotes anteriores à execução desta migração, pois não tinham identificador de lote gravado. Para esses, use filtros.
+
+## Comentários formatados
+O campo commentary do JSON aceita Markdown simplificado, sem HTML:
+- `## Fundamentação` para título
+- `### Pegadinha` para subtítulo
+- `**TERMO IMPORTANTE**` para negrito (capslock fica preservado)
+- `==Atenção a este trecho==` para grifo verde
+- `__Expressão sublinhada__` para sublinhado
+
+Exemplo de JSON:
+```
+"commentary": "## Fundamentação\nO art. 2º prevê **CADASTRO NACIONAL**.\n\n### Pegadinha\n==Não confundir registro com porte.==\n\n**DICA:** memorize a diferença."
+```
+Essas marcas são renderizadas depois que o aluno responde. Não insira HTML, tags ou scripts.
+
+## Limitações
+- A exclusão remove de forma permanente as tentativas ligadas às questões; faça backup.
+- Não execute exclusão em lote enquanto outro administrador faz importação em paralelo.
+- A verificação do funcionamento na sua hospedagem Supabase/Render ainda precisa ser feita após publicar.

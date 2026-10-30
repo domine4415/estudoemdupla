@@ -16,12 +16,33 @@ async function api(url,method='GET',data){
 function addOption(select,value,label){select.add(new Option(label,value));}
 function elt(name,cls,txt){const e=document.createElement(name);if(cls)e.className=cls;if(txt!==undefined)e.textContent=txt;return e;}
 function withAsync(button,task){return async()=>{if(button.disabled)return;button.disabled=true;try{await task();}catch(e){notify(e.message,true);}finally{button.disabled=false;}};}
-function showAdmin(open){$('statsPane').classList.add('hidden');$('studyPane').classList.toggle('hidden',open);$('adminPane').classList.toggle('hidden',!open);$('adminToggle').textContent=open?'↩ Resolver questões':'⚙ Gerenciar questões';if(open)loadDrafts();else loadList();}
+function showAdmin(open){$('statsPane').classList.add('hidden');$('studyPane').classList.toggle('hidden',open);$('adminPane').classList.toggle('hidden',!open);$('adminToggle').textContent=open?'↩ Resolver questões':'⚙ Gerenciar questões';if(open){loadDrafts();loadDeleteFilters();}else loadList();}
 async function loadFacets(){try{filters=await api('bank/facets');fillDropdown('filterSubject',filters.subjects,'Todas as disciplinas');fillDropdown('filterBoard',filters.boards,'Todas as bancas');fillDropdown('filterYear',filters.years.map(String),'Todos os anos');fillTopics();}catch(e){notify('Filtros indisponíveis: '+e.message,true);}}
 function fillDropdown(id,values,prompt){const select=$(id),old=select.value;select.replaceChildren();addOption(select,'',prompt);for(const v of values||[])addOption(select,String(v),String(v));if([...select.options].some(o=>o.value===old))select.value=old;}
 function fillTopics(){const subject=$('filterSubject').value;const topics=[...new Set((filters.pairs||[]).filter(p=>!subject||p.subject===subject).map(p=>p.topic))].sort((a,b)=>a.localeCompare(b,'pt-BR'));fillDropdown('filterTopic',topics,'Todos os tópicos');}
 async function loadProgress(){try{const p=await api('bank/progress');$('statTotal').textContent=p.total??0;$('statAnswered').textContent=p.answered??0;$('statCorrect').textContent=p.correct??0;$('statWrong').textContent=p.wrong??0;}catch(e){notify('Não foi possível recuperar seu desempenho: '+e.message,true);}}
 let filterGeneration=0, responseCache=new Map(), requestGeneration=0;
+function renderCommentary(value){
+  const root=elt('div','commentary rich-comment');
+  const lines=String(value||'Sem comentário.').split(/\r?\n/);
+  for(const line of lines){
+    const trimmedLine=line.trim();
+    const block=elt(trimmedLine.startsWith('### ')?'h4':trimmedLine.startsWith('## ')?'h3':'p');
+    const source=trimmedLine.replace(/^#{2,3}\s+/, '');
+    // Markdown restrito: **negrito**, ==grifo==, __sublinhado__, `código`, texto puro.
+    const rx=/(\*\*([^*\n]+)\*\*|==([^=\n]+)==|__([^_\n]+)__|`([^`\n]+)`)/g;
+    let last=0,m;
+    while((m=rx.exec(source))!==null){
+      block.append(document.createTextNode(source.slice(last,m.index)));
+      const node=elt(m[2]?'strong':m[3]?'mark':m[4]?'u':'code');
+      node.textContent=m[2]||m[3]||m[4]||m[5];block.append(node);last=rx.lastIndex;
+    }
+    block.append(document.createTextNode(source.slice(last)));
+    if(!source)block.classList.add('empty-comment-line');
+    root.append(block);
+  }
+  return root;
+}
 function renderInlineQuestion(r){
  const card=elt('article','inline-question');card.dataset.questionId=r.id;
  const header=elt('div','inline-header');header.append(elt('span','eyebrow',`${r.subject} / ${r.topic}`),elt('span','pill',r.type==='true_false'?'CERTO OU ERRADO':'MÚLTIPLA ESCOLHA'));
@@ -35,7 +56,7 @@ function renderInlineQuestion(r){
  if(prior){banner.textContent=resolved?'✓ Você respondeu esta questão nesta filtragem.':'↺ Você já respondeu esta questão anteriormente. Pode responder de novo nesta filtragem.';banner.classList.add('visible');}
  function displayAnswer(result){
    opts.querySelectorAll('button').forEach(b=>{b.disabled=true;if(b.dataset.choice===result.correct)b.classList.add('correct');else if(b.dataset.choice===result.choice)b.classList.add('wrong');});
-   feedback.replaceChildren(elt('strong','',result.isCorrect?'✓ Você acertou!':'✕ Você errou.'),elt('div','',`Sua resposta: ${result.choice} • Gabarito: ${result.correct}`),elt('div','commentary',result.commentary||'Esta questão não possui comentário explicativo.'));
+   feedback.replaceChildren(elt('strong','',result.isCorrect?'✓ Você acertou!':'✕ Você errou.'),elt('div','',`Sua resposta: ${result.choice} • Gabarito: ${result.correct}`),renderCommentary(result.commentary||'Esta questão não possui comentário explicativo.'));
    feedback.classList.remove('hidden');feedback.classList.toggle('wrong',!result.isCorrect);
    banner.textContent='✓ Respondida nesta filtragem.';
  }
@@ -82,7 +103,7 @@ function showFeedback({choice,correct,isCorrect,commentary},wasOld=false){
   const headline=elt('strong','',isCorrect?'✓ Resposta correta!':'✕ Resposta incorreta');
   const explanation=elt('div','',`Você marcou ${choice}. Gabarito: ${correct}.`);
   f.append(headline,explanation);
-  const comment=elt('div','commentary',commentary||'Esta questão ainda não possui comentário explicativo.');
+  const comment=renderCommentary(commentary||'Esta questão ainda não possui comentário explicativo.');
   f.append(comment);f.classList.remove('hidden');
   $('repeatQuestion').classList.remove('hidden');
   for(const b of $('bankOptions').querySelectorAll('button')){
@@ -179,9 +200,10 @@ async function uploadImport(){
   const btn=$('publishImport');btn.disabled=true;
   try{
     let count=0,drafts=0,ignored=0;
+    const batchId=crypto.randomUUID();
     for(let i=0;i<pendingImport.length;i+=150){
       const batch=pendingImport.slice(i,i+150);
-      const result=await api('bank/admin/import','POST',{questions:batch,rightsConfirmed:true});
+      const result=await api('bank/admin/import','POST',{questions:batch,rightsConfirmed:true,batchId});
       count+=result.imported;drafts+=result.drafts;ignored+=result.ignored;
       $('importPreview').textContent=`Importando... ${Math.min(i+150,pendingImport.length)} / ${pendingImport.length}`;
     }
@@ -251,6 +273,33 @@ async function deleteCurrent(){if(!editingId||!confirm('Excluir permanentemente 
     notify('Questão excluída.');await Promise.all([loadDrafts(),loadList(),loadProgress(),loadFacets()]);
   }catch(e){notify(e.message,true);}
 }
+async function previewDeletion(){
+  const mode=$('deleteMode').value,subject=$('deleteSubject').value,topic=$('deleteTopic').value;
+  const result=await api('bank/admin/deletion-preview','POST',{mode,subject,topic});
+  $('deleteCount').textContent=`${result.count} questões serão excluídas. As tentativas vinculadas também serão apagadas.`;
+  return {...result,subject,topic};
+}
+async function deleteGroup(){
+  try{
+    const preview=await previewDeletion();
+    if(!preview.count)return;
+    const typed=prompt(`ATENÇÃO: serão excluídas ${preview.count} questões e todo o histórico delas. Digite EXCLUIR para confirmar:`);
+    if(typed!=='EXCLUIR')return;
+    const done=await api('bank/admin/delete-group','POST',{mode:preview.mode,subject:preview.subject,topic:preview.topic,batchId:preview.batchId,confirmCount:preview.count,confirmText:'EXCLUIR'});
+    notify(`${done.deleted} questões excluídas.`);
+    await Promise.all([loadDrafts(),loadList(),loadFacets(),loadProgress()]);
+    await previewDeletion();
+  }catch(e){notify(e.message,true);}
+}
+async function loadDeleteFilters(){
+  try{
+    const data=await api('bank/admin/delete-facets');
+    const sel=$('deleteSubject');sel.replaceChildren();addOption(sel,'','Selecione uma disciplina');
+    for(const subject of data.subjects||[])addOption(sel,subject,subject);
+    sel.onchange=()=>{const topic=$('deleteTopic');topic.replaceChildren();addOption(topic,'','Todos os tópicos');for(const x of data.pairs||[])if(x.subject===sel.value)addOption(topic,x.topic,x.topic);};
+    sel.onchange();
+  }catch(e){notify(e.message,true);}
+}
 async function showStats(){
   $('studyPane').classList.add('hidden');$('adminPane').classList.add('hidden');$('statsPane').classList.remove('hidden');
   $('statsSummary').textContent='Carregando...';$('statsSubjects').replaceChildren();
@@ -295,6 +344,8 @@ async function boot(){
   $('editAlternatives').addEventListener('blur',refreshKeyOptions);
   $('editorForm').addEventListener('submit',saveEdit);
   $('deleteQuestion').onclick=deleteCurrent;
+  $('deletePreview').onclick=withAsync($('deletePreview'),previewDeletion);
+  $('deleteGroup').onclick=withAsync($('deleteGroup'),deleteGroup);
   await Promise.all([loadFacets(),loadList(),loadProgress()]);
   if(location.hash==="#estatisticas")showStats();
 }

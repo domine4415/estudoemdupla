@@ -5,6 +5,7 @@ const crypto=require('node:crypto');
 const UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const MAX_BATCH=250;
 const MAX_PAGE=10;
+const DELETE_LIMIT=10000;
 const letters='ABCDEFGH';
 function trimmed(value,max=1000){return typeof value==='string'?value.trim().slice(0,max):'';}
 function normalize(q){
@@ -147,6 +148,12 @@ module.exports=function createBankApi({databaseRequest,parseJson,send,err,isAdmi
     if(op!=='admin')return err(res,404,'Rota do banco não encontrada.');
     if(!isAdmin(user))return err(res,403,'Somente o administrador pode gerenciar questões.');
     const action=parts[1]||'';
+    if(action==='delete-facets'&&req.method==='GET'){
+      const rows=await json('dupla_bank_questions?'+new URLSearchParams({select:'subject,topic',limit:'100000'}));
+      const subjects=[...new Set(rows.map(r=>r.subject))].sort();
+      const pairs=[...new Map(rows.map(r=>[r.subject+'\u0000'+r.topic,{subject:r.subject,topic:r.topic}])).values()];
+      return send(res,200,{subjects,pairs});
+    }
     if(action==='item'&&parts.length===3&&req.method==='GET'){
       const row=await questionById(parts[2],true);
       if(!row)return err(res,404,'Questão não encontrada.');
@@ -161,7 +168,7 @@ module.exports=function createBankApi({databaseRequest,parseJson,send,err,isAdmi
       return send(res,200,{items:rows.slice(0,30).map(r=>({id:r.id,subject:r.subject,topic:r.topic,statement:r.statement.slice(0,240),
         published:r.published,hasKey:r.has_key,hasCommentary:r.has_commentary,...(draft?{data:r.data}:{})})),hasMore:rows.length>30,page});
     }
-    async function saveUnique(q,published=true){
+    async function saveUnique(q,published=true,batchId=null){
       const row=bankRow(q,published);
       // Prioridade: ID original (estável). Texto é fallback para registros antigos.
       const source=q.originalId;
@@ -181,7 +188,7 @@ module.exports=function createBankApi({databaseRequest,parseJson,send,err,isAdmi
         await query('dupla_bank_questions?id=eq.'+existing.id,{method:'PATCH',headers:{Prefer:'return=minimal'},body:JSON.stringify(row)});
         return 'updated';
       }
-      await query('dupla_bank_questions',{method:'POST',headers:{Prefer:'return=minimal'},body:JSON.stringify(row)});
+      await query('dupla_bank_questions',{method:'POST',headers:{Prefer:'return=minimal'},body:JSON.stringify({...row,import_batch:batchId})});
       return 'created';
     }
     if(action==='import'&&req.method==='POST'){
@@ -189,6 +196,8 @@ module.exports=function createBankApi({databaseRequest,parseJson,send,err,isAdmi
       if(body.rightsConfirmed!==true)return err(res,400,'Confirme que possui autorização para publicar estas questões.');
       if(!Array.isArray(body.questions)||body.questions.length===0||body.questions.length>MAX_BATCH)
         return err(res,400,'Envie de 1 a '+MAX_BATCH+' questões por vez.');
+      const batchId=trimmed(body.batchId,50);
+      if(!UUID.test(batchId))return err(res,400,'Identificador do lote inválido. Atualize o navegador.');
       const normalized=body.questions.map(normalize);
       const valid=normalized.filter(Boolean);
       if(!valid.length)return err(res,400,'Nenhuma questão válida: é necessário enunciado e pelo menos duas alternativas.');
@@ -196,7 +205,7 @@ module.exports=function createBankApi({databaseRequest,parseJson,send,err,isAdmi
       const unique=[...new Map(valid.map(q=>[q.originalId?'id:'+q.originalId:'text:'+fingerprint(q),q])).values()];
       let created=0,updated=0;
       for(const q of unique){
-        const result=await saveUnique(q);
+        const result=await saveUnique(q,true,batchId);
         if(result==='created')created++;else updated++;
       }
       const pending=unique.filter(q=>!q.correct).length;
@@ -222,6 +231,35 @@ module.exports=function createBankApi({databaseRequest,parseJson,send,err,isAdmi
         updated_at:new Date().toISOString()};
       await query('dupla_bank_questions?id=eq.'+original.id,{method:'PATCH',headers:{Prefer:'return=minimal'},body:JSON.stringify(update)});
       return send(res,200,{ok:true,published});
+    }
+    // Prévia obrigatória antes de qualquer exclusão em lote.
+    // Última importação = apenas novos registros criados no lote; questões atualizadas anteriormente permanecem.
+    if(action==='deletion-preview'&&req.method==='POST' || action==='delete-group'&&req.method==='POST'){
+      const body=await parseJson(req);
+      const mode=trimmed(body.mode,20);
+      let params;
+      if(mode==='last'){
+        const latest=await json('dupla_bank_questions?'+new URLSearchParams({select:'import_batch,created_at',import_batch:'not.is.null',order:'created_at.desc',limit:'1'}));
+        if(!latest.length)return send(res,200,{count:0,mode:'last',batchId:null});
+        params=new URLSearchParams({import_batch:'eq.'+latest[0].import_batch});
+      } else if(mode==='filters'){
+        const subject=trimmed(body.subject,180),topic=trimmed(body.topic,180);
+        if(!subject)return err(res,400,'Selecione uma disciplina para excluir por filtros.');
+        params=new URLSearchParams({subject:'eq.'+subject});
+        if(topic)params.set('topic','eq.'+topic);
+      } else return err(res,400,'Modo de exclusão inválido.');
+      // Ler IDs para limitar a operação e usar a mesma seleção na prévia e no envio.
+      params.set('select','id');params.set('limit',String(DELETE_LIMIT+1));
+      const rows=await json('dupla_bank_questions?'+params);
+      if(rows.length>DELETE_LIMIT)return err(res,413,'Muitas questões: reduza os filtros.');
+      const ids=rows.map(r=>r.id);
+      const batchId=mode==='last'?params.get('import_batch').slice(3):null;
+      if(action==='deletion-preview')return send(res,200,{count:ids.length,mode,batchId});
+      if(body.confirmText!=='EXCLUIR'||body.confirmCount!==ids.length)return err(res,409,'A seleção mudou ou faltou confirmação. Faça nova prévia.');
+      if(mode==='last'&&body.batchId!==batchId)return err(res,409,'O último lote mudou. Faça nova prévia.');
+      // Exclui os IDs exatamente apurados, com cascata de tentativas do banco.
+      if(ids.length)await query('dupla_bank_questions?id=in.('+ids.join(',')+')',{method:'DELETE',headers:{Prefer:'return=minimal'}});
+      return send(res,200,{ok:true,deleted:ids.length});
     }
     if(action==='delete'&&req.method==='POST'){
       const body=await parseJson(req);
