@@ -141,7 +141,7 @@ function parseRecord(raw,index){
     return {letter,text};
   }).filter(a=>a.letter&&a.text);
   if(!alternatives.length&&type==='true_false')alternatives=[{letter:'C',text:'Certo'},{letter:'E',text:'Errado'}];
-  const possible=raw.correct??raw.gabarito??raw.answer??raw.result;
+  const possible=raw.correct??raw.correctAnswer??raw.gabarito??raw.answer??raw.result;
   const candidate=typeof possible==='string'?possible.toUpperCase().trim():'';
   const correct=alternatives.some(a=>a.letter===candidate)?candidate:null;
   let subject=clean(extra.subject||raw.subject||raw.metadata?.subject)||'Não classificada';
@@ -151,7 +151,7 @@ function parseRecord(raw,index){
   return {id:String(raw.id||index+1),statement:clean(extra.statement||raw.statement),alternatives,type,
     correct,commentary:clean(raw.commentary||raw.explanation||raw.comentario||raw.justification),
     subject,topic,board:clean(extra.board||raw.board),exam:clean(extra.exam||raw.exam),
-    year:clean(extra.year||raw.year),originalId:clean(extra.originalId||raw.originalId),link:clean(extra.link||raw.link)};
+    year:clean(extra.year||raw.year),originalId:clean(extra.originalId||raw.originalId||(String(raw.statementHtml||'').match(/tecconcursos\.com\.br\/questoes\/(\d{4,20})/)||[])[1]||(/^\d{4,20}$/.test(String(raw.id||''))?raw.id:'')),link:clean(extra.link||raw.link)};
 }
 function extractRecords(data){const items=Array.isArray(data)?data:(Array.isArray(data.questions)?data.questions:(data.statement?[data]:null));
   if(!items?.length)throw Error('O JSON precisa ser uma lista de questões ou conter a propriedade "questions".');

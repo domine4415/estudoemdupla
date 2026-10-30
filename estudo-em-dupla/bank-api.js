@@ -16,10 +16,12 @@ function normalize(q){
   if(q.type==='true_false' && alternatives.length===0)alternatives=[{letter:'C',text:'Certo'},{letter:'E',text:'Errado'}];
   if(new Set(alternatives.map(a=>a.letter)).size!==alternatives.length)return null;
   const statement=trimmed(q.statement,12000);
-  const correct=trimmed(q.correct,1).toUpperCase();
+  const correct=trimmed(q.correct??q.correctAnswer??q.gabarito,1).toUpperCase();
   const normalizedCorrect=alternatives.some(a=>a.letter===correct)?correct:null;
   if(!statement||alternatives.length<2)return null;
-  const year=Number(q.year);
+  const year=Number(q.year??q.metadata?.year);
+  const providedId=q.originalId??q.metadata?.originalId??q.id;
+  const originalId=/^\d{3,20}$/.test(String(providedId??''))?String(providedId):'';
   return {
     statement, alternatives, type:q.type==='true_false'?'true_false':'multiple_choice',
     correct:normalizedCorrect,
@@ -28,7 +30,7 @@ function normalize(q){
     topic:trimmed(q.topic||q.assunto,180)||'Geral',
     board:trimmed(q.board,120),exam:trimmed(q.exam,250),
     year:Number.isInteger(year)&&year>=1900&&year<=2100?String(year):'',
-    originalId:trimmed(q.originalId,80),link:trimmed(q.link,600)
+    originalId,link:trimmed(q.link,600)
   };
 }
 function fingerprint(q){
@@ -36,7 +38,7 @@ function fingerprint(q){
   return crypto.createHash('sha256').update(q.statement.toLowerCase().replace(/\s+/g,' ').trim()).digest('hex');
 }
 function bankRow(q,published=true){return {
-  fingerprint:fingerprint(q),subject:q.subject,topic:q.topic,board:q.board,
+  fingerprint:fingerprint(q),source_id:q.originalId||null,subject:q.subject,topic:q.topic,board:q.board,
   exam_year:q.year?Number(q.year):null,statement:q.statement,
   has_key:!!q.correct,has_commentary:!!q.commentary,
   published:published&&!!q.correct,data:q,updated_at:new Date().toISOString()
@@ -159,6 +161,29 @@ module.exports=function createBankApi({databaseRequest,parseJson,send,err,isAdmi
       return send(res,200,{items:rows.slice(0,30).map(r=>({id:r.id,subject:r.subject,topic:r.topic,statement:r.statement.slice(0,240),
         published:r.published,hasKey:r.has_key,hasCommentary:r.has_commentary,...(draft?{data:r.data}:{})})),hasMore:rows.length>30,page});
     }
+    async function saveUnique(q,published=true){
+      const row=bankRow(q,published);
+      // Prioridade: ID original (estável). Texto é fallback para registros antigos.
+      const source=q.originalId;
+      let existing=null;
+      if(source){
+        const matches=await json('dupla_bank_questions?'+new URLSearchParams({select:'id,data,fingerprint,source_id',source_id:'eq.'+source,limit:'1'}));
+        existing=matches[0]||null;
+      }
+      if(!existing){
+        const matches=await json('dupla_bank_questions?'+new URLSearchParams({select:'id,data,fingerprint,source_id',fingerprint:'eq.'+row.fingerprint,limit:'1'}));
+        existing=matches[0]||null;
+      }
+      if(existing){
+        if(source&&existing.source_id&&existing.source_id!==source)
+          throw Object.assign(new Error('Enunciado igual já vinculado a outro código: '+existing.source_id),{status:409});
+        // Preserva UUID: as tentativas já registradas continuam ligadas à questão.
+        await query('dupla_bank_questions?id=eq.'+existing.id,{method:'PATCH',headers:{Prefer:'return=minimal'},body:JSON.stringify(row)});
+        return 'updated';
+      }
+      await query('dupla_bank_questions',{method:'POST',headers:{Prefer:'return=minimal'},body:JSON.stringify(row)});
+      return 'created';
+    }
     if(action==='import'&&req.method==='POST'){
       const body=await parseJson(req);
       if(body.rightsConfirmed!==true)return err(res,400,'Confirme que possui autorização para publicar estas questões.');
@@ -167,23 +192,23 @@ module.exports=function createBankApi({databaseRequest,parseJson,send,err,isAdmi
       const normalized=body.questions.map(normalize);
       const valid=normalized.filter(Boolean);
       if(!valid.length)return err(res,400,'Nenhuma questão válida: é necessário enunciado e pelo menos duas alternativas.');
-      // Tudo que ainda não tem gabarito vai para rascunhos, NÃO aparece aos estudantes.
-      const unique=[...new Map(valid.map(q=>[fingerprint(q),q])).values()];
-      for(let i=0;i<unique.length;i+=40){
-        const chunk=unique.slice(i,i+40).map(q=>bankRow(q));
-        await query('dupla_bank_questions?on_conflict=fingerprint',{method:'POST',headers:{Prefer:'resolution=merge-duplicates,return=minimal'},body:JSON.stringify(chunk)});
+      // Remove repetições dentro do próprio JSON, priorizando ID original.
+      const unique=[...new Map(valid.map(q=>[q.originalId?'id:'+q.originalId:'text:'+fingerprint(q),q])).values()];
+      let created=0,updated=0;
+      for(const q of unique){
+        const result=await saveUnique(q);
+        if(result==='created')created++;else updated++;
       }
       const pending=unique.filter(q=>!q.correct).length;
-      return send(res,200,{received:body.questions.length,imported:unique.length,drafts:pending,ignored:body.questions.length-valid.length});
+      return send(res,200,{received:body.questions.length,imported:unique.length,created,updated,duplicatesInFile:valid.length-unique.length,drafts:pending,ignored:body.questions.length-valid.length});
     }
     if(action==='create'&&req.method==='POST'){
       const body=await parseJson(req);
       if(body.rightsConfirmed!==true)return err(res,400,'Confirme a autorização de publicação.');
       const q=normalize(body.question);
       if(!q)return err(res,400,'Informe um enunciado e pelo menos duas alternativas válidas.');
-      const row=bankRow(q,body.published!==false);
-      await query('dupla_bank_questions?on_conflict=fingerprint',{method:'POST',headers:{Prefer:'resolution=merge-duplicates,return=minimal'},body:JSON.stringify(row)});
-      return send(res,200,{ok:true,published:row.published});
+      const result=await saveUnique(q,body.published!==false);
+      return send(res,200,{ok:true,result,published:body.published!==false&&!!q.correct});
     }
     if(action==='edit'&&req.method==='POST'){
       const body=await parseJson(req);
@@ -192,7 +217,7 @@ module.exports=function createBankApi({databaseRequest,parseJson,send,err,isAdmi
       const q=normalize(body.question);
       if(!q)return err(res,400,'Informe enunciado e pelo menos duas alternativas válidas.');
       const published=body.published!==false&&!!q.correct;
-      const update={fingerprint:fingerprint(q),subject:q.subject,topic:q.topic,board:q.board,exam_year:q.year?Number(q.year):null,
+      const update={fingerprint:fingerprint(q),source_id:q.originalId||null,subject:q.subject,topic:q.topic,board:q.board,exam_year:q.year?Number(q.year):null,
         statement:q.statement,has_key:!!q.correct,has_commentary:!!q.commentary,published,data:q,
         updated_at:new Date().toISOString()};
       await query('dupla_bank_questions?id=eq.'+original.id,{method:'PATCH',headers:{Prefer:'return=minimal'},body:JSON.stringify(update)});
