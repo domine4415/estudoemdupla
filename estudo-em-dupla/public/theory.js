@@ -7,7 +7,7 @@ async function api(path='',method='GET',body){
   const data=await response.json();if(!response.ok)throw Error(data.error||'Não foi possível concluir.');return data;
 }
 function inline(node,value){
-  const pattern=/\*\*(.+?)\*\*|==(.+?)==|__(.+?)__|`(.+?)`/g;let last=0;
+  const pattern=/\*\*([\s\S]+?)\*\*|==([\s\S]+?)==|__([\s\S]+?)__|`([^\n]+?)`/g;let last=0;
   for(const match of value.matchAll(pattern)){node.append(document.createTextNode(value.slice(last,match.index)));node.append(el(match[1]?'strong':match[2]?'mark':match[3]?'u':'code',match[1]||match[2]||match[3]||match[4]));last=match.index+match[0].length;}
   node.append(document.createTextNode(value.slice(last)));return node;
 }
@@ -83,6 +83,13 @@ function syncPreview(event){
   $('content').value=result.content;dirty=true;
   $('editorStatus').textContent='Alterações da prévia sincronizadas. Clique em Salvar aula para gravar.';
 }
+function formatEditedText(node){
+  // Formata apenas nós de texto: preserva quadros, células e o HTML já formatado.
+  const walker=document.createTreeWalker(node,4),texts=[];let text;
+  while((text=walker.nextNode()))if(!text.parentElement.closest('code')&&/\*\*[\s\S]+?\*\*|==[\s\S]+?==|__[\s\S]+?__|`[^\n]+?`/.test(text.textContent))texts.push(text);
+  for(const text of texts){const holder=inline(el('span'),text.textContent);text.replaceWith(...holder.childNodes);}
+  return texts.length>0;
+}
 function enablePreviewEditing(){
   if(!admin)return;
   const paper=$('preview');
@@ -90,6 +97,7 @@ function enablePreviewEditing(){
     if(node.parentElement.closest('[contenteditable="true"]'))continue;
     node.contentEditable='true';node.spellcheck=true;node.setAttribute('aria-label','Editar '+(node.tagName==='H1'?'título da aula':'texto da aula'));
     node.addEventListener('input',syncPreview);
+    node.addEventListener('blur',()=>{if(formatEditedText(node))syncPreview({currentTarget:node});});
     node.addEventListener('paste',event=>{
       event.preventDefault();const value=event.clipboardData?.getData('text/plain')||'';
       const selection=window.getSelection();if(!selection?.rangeCount)return;const range=selection.getRangeAt(0);if(!node.contains(range.commonAncestorContainer))return;
