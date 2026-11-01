@@ -19,9 +19,20 @@ function renderPaper(target,lesson){
 function renderBlocks(target,lesson,depth=0){
   const lines=String(lesson.content||'').replace(/\r/g,'').split('\n');let list=null;
   const cells=line=>line.trim().replace(/^\||\|$/g,'').split('|').map(s=>s.trim());
+  const tabCells=line=>line.trim().split(/\t+/).map(s=>s.trim());
+  function tableBlock(rows){
+    const wrap=el('div');wrap.className='table-scroll';const table=el('table'),head=el('thead'),body=el('tbody');
+    const width=Math.max(...rows.map(row=>row.length));
+    rows.forEach((row,index)=>{const tr=el('tr');for(let col=0;col<width;col++)tr.append(inline(el(index?'td':'th'),row[col]||''));(index?body:head).append(tr);});
+    table.append(head,body);wrap.append(table);target.append(wrap);list=null;
+  }
   for(let i=0;i<lines.length;i++){
     const line=lines[i],s=line.trim();
     if(!s){list=null;continue;}
+    // A cópia em texto de uma tabela normalmente usa tabulações entre colunas.
+    if(line.includes('\t')&&i+1<lines.length&&lines[i+1].includes('\t')){
+      const rows=[];while(i<lines.length&&lines[i].trim()&&lines[i].includes('\t'))rows.push(tabCells(lines[i++]));i--;tableBlock(rows);continue;
+    }
     const frame=s.match(/^:::(quadro|mapa|verde|vermelho|azul|amarelo|imagens)(?:\s+(.+))?$/);
     if(frame&&depth<6){
       let end=i+1,nesting=1;
@@ -47,7 +58,7 @@ function renderBlocks(target,lesson,depth=0){
     if(s.startsWith('>')){target.append(inline(el('blockquote'),s.replace(/^>\s?/,'')));list=null;continue;}
     const bullet=s.match(/^(?:[-*]\s+|\d+[.)]\s+)(.+)$/);
     if(bullet){const tag=/^\d/.test(s)?'ol':'ul';if(!list||list.tagName.toLowerCase()!==tag){list=el(tag);target.append(list);}list.append(inline(el('li'),bullet[1]));continue;}
-    list=null;const paragraph=[line];while(i+1<lines.length&&lines[i+1].trim()&&!/^(?::::|#{1,4}\s|>|[-*]\s|\d+[.)]\s|!\[|---|\|)/.test(lines[i+1].trim())){if(i+2<lines.length&&/^\|?\s*:?-{3,}/.test(lines[i+2].trim()))break;paragraph.push(lines[++i]);}target.append(inline(el('p'),paragraph.join('\n')));
+    list=null;const paragraph=[line];while(i+1<lines.length&&lines[i+1].trim()&&!lines[i+1].includes('\t')&&!/^(?::::|#{1,4}\s|>|[-*]\s|\d+[.)]\s|!\[|---|\|)/.test(lines[i+1].trim())){if(i+2<lines.length&&/^\|?\s*:?-{3,}/.test(lines[i+2].trim()))break;paragraph.push(lines[++i]);}target.append(inline(el('p'),paragraph.join('\n')));
   }
 }
 function options(id,values,label){const select=$(id),old=select.value;select.replaceChildren(new Option(label,''));for(const value of [...new Set(values)].sort((a,b)=>a.localeCompare(b,'pt-BR')))select.add(new Option(value,value));if([...select.options].some(o=>o.value===old))select.value=old;}
@@ -94,7 +105,10 @@ function convertPastedHtml(html){
     if(tag==='hr')return '\n\n---\n\n';
     if(tag==='pre')return '\n\n'+node.textContent+'\n\n';
     if(tag==='code')return '`'+node.textContent+'`';
-    if(tag==='li')return '\n- '+children().trim()+'\n';
+    if(tag==='li'){
+      if(node.children.length===1&&/^H[1-6]$/.test(node.children[0].tagName))return '\n\n'+children().trim()+'\n\n';
+      return '\n- '+children().trim()+'\n';
+    }
     if(tag==='ul'||tag==='ol')return '\n'+children()+'\n';
     if(tag==='blockquote')return '\n\n'+children().trim().split('\n').filter(Boolean).map(line=>'> '+line).join('\n')+'\n\n';
     if(tag==='table'){
@@ -131,11 +145,11 @@ $('content').addEventListener('paste',async event=>{
   if(!plain&&!html&&files.length){event.preventDefault();$('saveLesson').disabled=true;try{for(const file of files)await imageFile(file);$('editorStatus').textContent='Imagens coladas e inseridas na aula.';}catch(e){$('editorStatus').textContent=e.message;}finally{$('saveLesson').disabled=false;}return;}
   let source=plain.trim();const fence=source.match(/^```(?:html|markdown|md|text)?\s*\n([\s\S]*?)\n```$/i);if(fence)source=fence[1];
   const rawHtml=/^\s*(?:<!doctype html|<(?:html|article|section|div|table|h[1-6]|p)[\s>])/i.test(source);
-  const markdown=/^:::(?:quadro|mapa|verde|vermelho|azul|amarelo|imagens)\b/m.test(source)||/^#{1,4}\s/m.test(source);
-  if(!rawHtml&&(!html||markdown)&&!fence)return;
+  const customFrames=/^:::(?:quadro|mapa|verde|vermelho|azul|amarelo|imagens)\b/m.test(source);
+  if(!rawHtml&&(!html||customFrames)&&!fence)return;
   event.preventDefault();
   try{
-    const priorImages={...images};const result=rawHtml||(!markdown&&html)?convertPastedHtml(rawHtml?source:html):{content:source};
+    const priorImages={...images};const result=rawHtml||(!customFrames&&html&&!fence)?convertPastedHtml(rawHtml?source:html):{content:source};
     if($('content').value.length-($('content').selectionEnd-$('content').selectionStart)+result.content.length+4>150000){images=priorImages;throw Error('O texto excede o limite de 150 mil caracteres por aula.');}
     insertContent(result.content);$('editorStatus').textContent='Conteúdo colado e formatado automaticamente. Confira a prévia.'+(result.externalImages?' Imagens por link dependem da disponibilidade no site de origem.':'')+(result.missingImages?' Algumas imagens não vieram na cópia; você pode copiar a imagem e colar diretamente neste campo.':'');
   }catch(e){$('editorStatus').textContent='Não foi possível converter: '+e.message;}
