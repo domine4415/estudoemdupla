@@ -6,6 +6,7 @@ const path = require('node:path');
 const crypto = require('node:crypto');
 const PORT = Number(process.env.PORT || 3000);
 const createBankApi = require('./bank-api');
+const {topicFilter,normalizeTopic}=require('./topic');
 const rooms = new Map();
 // Persistência opcional. Nunca envie SUPABASE_SECRET_KEY para o frontend.
 const SUPABASE_URL = (process.env.SUPABASE_URL || '').replace(/\/$/, '');
@@ -410,10 +411,10 @@ async function handleApi(req,res,url,user) {
     const p=new URLSearchParams({select:'data',published:'eq.true',order:'created_at.desc',limit:String(amount)});
     const selectedSubject=safeText(body.subject,180),selectedTopic=safeText(body.topic,180);
     if(selectedSubject)p.set('subject','eq.'+selectedSubject);
-    if(selectedTopic)p.set('topic','eq.'+selectedTopic);
+    if(selectedTopic)p.set('topic',topicFilter(selectedTopic));
     const rows=await (await databaseRequest('dupla_bank_questions?'+p)).json();
     if(!rows.length){err(res,404,'Não existem questões publicadas com esses filtros.');return;}
-    const normalized=rows.map((r,i)=>normalizeQuestion(r.data,i)).filter(Boolean);
+    const normalized=rows.map((r,i)=>normalizeQuestion({...r.data,topic:normalizeTopic(r.data?.topic)},i)).filter(Boolean);
     room.questions=normalized;room.index=0;room.votes={};
     await persistRoom(room);notify(room);
     send(res,200,{imported:normalized.length});return;

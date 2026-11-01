@@ -2,6 +2,7 @@
 // Banco de questões autorais, de domínio público ou com permissão de publicação.
 // A chave secreta do Supabase fica SOMENTE no servidor.
 const crypto=require('node:crypto');
+const {normalizeTopic,topicFilter}=require('./topic');
 const UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const MAX_BATCH=250;
 const MAX_PAGE=10;
@@ -28,7 +29,7 @@ function normalize(q){
     correct:normalizedCorrect,
     commentary:trimmed(q.commentary||q.explanation||q.comentario,12000),
     subject:trimmed(q.subject??q.metadata?.subject,180)||'Não classificada',
-    topic:trimmed(q.topic||q.assunto||q.metadata?.topic,180)||'Geral',
+    topic:normalizeTopic(trimmed(q.topic||q.assunto||q.metadata?.topic,180))||'Geral',
     board:trimmed(q.board??q.metadata?.board,120),exam:trimmed(q.exam??q.metadata?.contest,250),
     year:Number.isInteger(year)&&year>=1900&&year<=2100?String(year):'',
     originalId,link:trimmed(q.link??q.sourceUrl,600)
@@ -47,7 +48,7 @@ function bankRow(q,published=true){return {
 function publicQuestion(row,attempt){
   const q=row.data||{};
   const answered=Boolean(attempt);
-  return {id:row.id,subject:row.subject,topic:row.topic,board:row.board,year:row.exam_year,
+  return {id:row.id,subject:row.subject,topic:normalizeTopic(row.topic),board:row.board,year:row.exam_year,
     exam:q.exam||'',originalId:q.originalId||'',link:q.link||'',
     statement:q.statement||row.statement,alternatives:q.alternatives||[],type:q.type||'multiple_choice',
     lastAttempt:attempt?{choice:attempt.choice,isCorrect:attempt.is_correct,at:attempt.answered_at}:null,
@@ -77,6 +78,10 @@ module.exports=function createBankApi({databaseRequest,parseJson,send,err,isAdmi
     const op=parts[0]||'';
     if(op==='facets' && req.method==='GET'){
       const d=await json('rpc/dupla_bank_facets',{method:'POST',body:'{}'});
+      d.pairs=[...new Map((d.pairs||[]).map(p=>{
+        const pair={...p,topic:normalizeTopic(p.topic)};
+        return [JSON.stringify([pair.subject,pair.topic]),pair];
+      })).values()];
       return send(res,200,d);
     }
     if(op==='questions'&&req.method==='GET'){
@@ -84,7 +89,7 @@ module.exports=function createBankApi({databaseRequest,parseJson,send,err,isAdmi
       const p=new URLSearchParams({select:'id,subject,topic,board,exam_year,statement,has_key,has_commentary,data',published:'eq.true',order:'created_at.desc',limit:String(MAX_PAGE+1),offset:String((page-1)*MAX_PAGE)});
       for(const [field,column,max] of [['subject','subject',180],['topic','topic',180],['board','board',120],['year','exam_year',4]]){
         const value=trimmed(url.searchParams.get(field),max);
-        if(value)p.set(column,'eq.'+value);
+        if(value)p.set(column,field==='topic'?topicFilter(value):'eq.'+value);
       }
       const search=trimmed(url.searchParams.get('search'),70);
       if(search){ // Usar filtro da coluna simples, sem expor o JSON de respostas.
@@ -108,7 +113,7 @@ module.exports=function createBankApi({databaseRequest,parseJson,send,err,isAdmi
       const visible=rows.slice(0,MAX_PAGE);
       const attemptRows=visible.length?await json('dupla_bank_attempts?'+new URLSearchParams({select:'question_id,choice,is_correct,answered_at,id',user_id:'eq.'+user.id,question_id:'in.('+visible.map(r=>r.id).join(',')+')',order:'answered_at.desc,id.desc',limit:'10000'})):[];
       const latest=new Map();for(const a of attemptRows)if(!latest.has(a.question_id))latest.set(a.question_id,a);
-      return send(res,200,{items:visible.map(x=>({id:x.id,subject:x.subject,topic:x.topic,board:x.board,
+      return send(res,200,{items:visible.map(x=>({id:x.id,subject:x.subject,topic:normalizeTopic(x.topic),board:x.board,
         year:x.exam_year,type:x.data?.type||'multiple_choice',preview:x.statement.slice(0,250),hasKey:x.has_key,hasCommentary:x.has_commentary, lastAttempt:latest.get(x.id)?{choice:latest.get(x.id).choice,isCorrect:latest.get(x.id).is_correct}:null,alternatives:x.data?.alternatives||[],statement:x.data?.statement||x.statement,exam:x.data?.exam||''})),page,hasMore:rows.length>MAX_PAGE});
     }
     if(op==='question'&&parts.length===2&&req.method==='GET'){
@@ -148,6 +153,30 @@ module.exports=function createBankApi({databaseRequest,parseJson,send,err,isAdmi
     if(op!=='admin')return err(res,404,'Rota do banco não encontrada.');
     if(!isAdmin(user))return err(res,403,'Somente o administrador pode gerenciar questões.');
     const action=parts[1]||'';
+    if(action==='rename-topic'&&req.method==='POST'){
+      const body=await parseJson(req);
+      const subject=trimmed(body.subject,180),topic=trimmed(body.topic,180);
+      const newTopic=trimmed(body.newTopic,180);
+      if(!subject||!topic||!newTopic||typeof body.newTopic!=='string'||body.newTopic.trim().length>180)return err(res,400,'Selecione uma disciplina e um tópico e informe um nome de até 180 caracteres.');
+      if(topic===newTopic)return err(res,400,'Informe um nome diferente do tópico atual.');
+      let updated=0;
+      try{
+        // Cada página deixa a seleção após a atualização; não usar offset.
+        for(;;){
+          const params=new URLSearchParams({select:'id,data',subject:'eq.'+subject,topic:'eq.'+topic,order:'id',limit:'250'});
+          const rows=await json('dupla_bank_questions?'+params);
+          if(!rows.length)break;
+          for(const row of rows){
+            await query('dupla_bank_questions?'+new URLSearchParams({id:'eq.'+row.id,subject:'eq.'+subject,topic:'eq.'+topic}),{
+              method:'PATCH',headers:{Prefer:'return=minimal'},
+              body:JSON.stringify({topic:newTopic,data:{...row.data,topic:newTopic},updated_at:new Date().toISOString()})
+            });
+            updated++;
+          }
+        }
+      }catch(e){throw Object.assign(new Error(`${updated} questões atualizadas. Não foi possível concluir; selecione o tópico antigo e tente novamente.`),{status:502});}
+      return send(res,200,{ok:true,updated,topic:newTopic});
+    }
     if(action==='delete-facets'&&req.method==='GET'){
       const rows=await json('dupla_bank_questions?'+new URLSearchParams({select:'subject,topic',limit:'100000'}));
       const subjects=[...new Set(rows.map(r=>r.subject))].sort();

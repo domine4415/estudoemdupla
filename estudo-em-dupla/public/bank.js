@@ -333,7 +333,24 @@ async function loadDeleteFilters(){
     for(const subject of data.subjects||[])addOption(sel,subject,subject);
     sel.onchange=()=>{const topic=$('deleteTopic');topic.replaceChildren();addOption(topic,'','Todos os tópicos');for(const x of data.pairs||[])if(x.subject===sel.value)addOption(topic,x.topic,x.topic);};
     sel.onchange();
+    const rename=$('renameSubject');rename.replaceChildren();addOption(rename,'','Selecione uma disciplina');
+    for(const subject of data.subjects||[])addOption(rename,subject,subject);
+    rename.onchange=()=>{const topics=$('renameTopic');topics.replaceChildren();addOption(topics,'','Selecione um tópico');for(const pair of data.pairs||[])if(pair.subject===rename.value)addOption(topics,pair.topic,pair.topic);};
+    rename.onchange();
   }catch(e){notify(e.message,true);}
+}
+async function renameTopic(){
+  const subject=$('renameSubject').value,topic=$('renameTopic').value,newTopic=$('renameTopicName').value.trim();
+  if(!subject||!topic||!newTopic){notify('Selecione a disciplina, o tópico atual e informe o novo nome.',true);return;}
+  const status=$('renameTopicStatus');status.textContent='Atualizando questões...';
+  try{
+    const result=await api('bank/admin/rename-topic','POST',{subject,topic,newTopic});
+    status.textContent=`${result.updated} questões atualizadas para “${result.topic}”.`;
+    $('renameTopicName').value='';$('filterTopic').value='';
+    await loadFacets();
+    await Promise.all([loadDeleteFilters(),loadDrafts(),loadList()]);
+    if(currentId)await openQuestion(currentId);
+  }catch(e){status.textContent=e.message;notify(e.message,true);await loadDeleteFilters();}
 }
 async function showStats(){
   $('studyPane').classList.add('hidden');$('adminPane').classList.add('hidden');$('statsPane').classList.remove('hidden');
@@ -381,6 +398,7 @@ async function boot(){
   $('deleteQuestion').onclick=deleteCurrent;
   $('deletePreview').onclick=withAsync($('deletePreview'),previewDeletion);
   $('deleteGroup').onclick=withAsync($('deleteGroup'),deleteGroup);
+  $('renameTopicButton').onclick=withAsync($('renameTopicButton'),renameTopic);
   await Promise.all([loadFacets(),loadList(),loadProgress()]);
   if(location.hash==="#estatisticas")showStats();
 }
