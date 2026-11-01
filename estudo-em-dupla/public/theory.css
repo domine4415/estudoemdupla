@@ -22,3 +22,7 @@
 .lesson-paper .study-mapa>.table-scroll,.lesson-paper .study-mapa>ul,.lesson-paper .study-mapa>ol,.lesson-paper .study-mapa>blockquote,.lesson-paper .study-mapa>figure{grid-column:1/-1}
 .lesson-paper .study-block-title{text-align:left}
 .lesson-paper .study-mapa>.study-block-title,.lesson-paper .study-mapa>.study-azul:first-of-type>.study-block-title{text-align:center}
+.lesson-paper [contenteditable="true"]{cursor:text;outline:2px solid transparent;outline-offset:4px;border-radius:2px;min-height:1em}
+.lesson-paper [contenteditable="true"]:hover{outline-color:#a0c7ac}
+.lesson-paper [contenteditable="true"]:focus{outline-color:#447d56;background-color:#e7f3e866}
+@media print{.lesson-paper [contenteditable]{outline:none!important}}
