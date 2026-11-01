@@ -1,4 +1,4 @@
--- ESTUDO EM DUPLA — BANCO DE QUESTÕES INDIVIDUAL
+-- ESTUDO POLICIAL — BANCO DE QUESTÕES INDIVIDUAL
 -- Cole todo este arquivo no Supabase > SQL Editor > New query > Run.
 -- Não apaga suas salas nem o histórico delas.
 

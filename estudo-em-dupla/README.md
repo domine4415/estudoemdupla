@@ -1,4 +1,4 @@
-# Estudo em Dupla
+# ESTUDO POLICIAL
 
 Aplicativo Node.js com salas de estudo ao vivo, banco individual de questões, login e histórico no Supabase.
 
@@ -38,7 +38,7 @@ A conta administradora precisa ter e-mail confirmado. Não publique chaves secre
 
 Envie o projeto ao GitHub mantendo `server.js`, `bank-api.js`, `topic.js`, `package.json` e a pasta `public` na mesma estrutura. No Render, use um serviço web Node.js com `npm install` como comando de construção e `npm start` como inicialização. O arquivo `render.yaml` também descreve o serviço.
 
-O Root Directory deve apontar para a pasta que contém `package.json`: deixe vazio se os arquivos estão na raiz do repositório; use `estudo-em-dupla` se estão nessa subpasta. Configure as variáveis do Supabase no serviço.
+O Root Directory deve apontar para a pasta que contém `package.json`: deixe vazio se os arquivos estão na raiz do repositório; informe o nome exato da subpasta se os arquivos não estão na raiz. Configure as variáveis do Supabase no serviço.
 
 Após publicar, aguarde o serviço ficar disponível e atualize o navegador. `/api/health` informa o estado de configuração do armazenamento e da autenticação; também teste login, banco e salas para verificar o funcionamento completo.
 
@@ -71,3 +71,12 @@ Importe somente questões próprias ou com autorização de disponibilização. 
 Se não conectar, confira se o servidor está aberto e se você está usando o endereço dele, em vez de abrir HTML diretamente. Na hospedagem, publique o projeto completo: enviar apenas `public/` não executa o servidor.
 
 Se login ou gravação falharem, confira as variáveis, tabelas, confirmação do e-mail e os registros do serviço. Mantenha os JSONs originais e backups do Supabase. Salas antigas podem depender do token salvo no navegador original; novas salas são associadas às contas.
+
+
+## Aulas de teoria
+
+Execute `TEORIA_SQL.sql` no SQL Editor do Supabase para criar a tabela de aulas (sem alterar as questões ou salas). Publique também `theory-api.js`, `server.js`, a pasta `public` atualizada e os demais arquivos necessários do projeto.
+
+Acesse **Teoria** na página inicial ou no menu do banco. O administrador verá **Criar aula**. Informe título, disciplina e tópico, cole o conteúdo em Markdown e use **Inserir imagem** para adicionar PNG, JPG ou WebP na posição do cursor. Imagens são otimizadas e guardadas na própria aula, até 4 MB no total. O modelo de formatação fica no editor. HTML colado aparece como texto; use títulos, listas, tabelas e destaques do modelo.
+
+Confira a prévia e salve como rascunho ou marque **Publicar para os alunos**. Só administradores podem ver rascunhos, editar e excluir. Alunos autenticados podem filtrar e abrir as aulas publicadas. **Imprimir / Salvar PDF** permite usar a impressão do navegador para exportação. O formato visual das aulas é padronizado automaticamente, incluindo a página de impressão.

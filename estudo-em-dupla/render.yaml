@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: estudo-em-dupla
+    name: estudopolicial
     runtime: node
     plan: free
     buildCommand: npm install

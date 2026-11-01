@@ -69,3 +69,14 @@ body{background:radial-gradient(ellipse 55% 35% at 53% 0%,rgba(59,120,102,.12),t
 .room-commentary u{text-underline-offset:3px;text-decoration-color:#a2efb5}
 .room-commentary code{color:#d6ffe1;border:1px solid #456958;border-radius:4px;padding:1px 4px}
 .room-no-comment{margin:12px 0 0;color:#a8b9c6}
+:root{--police-green:#a2efb5;--police-border:#324056}
+/* Identidade ESTUDO POLICIAL com destaques verdes e escudo. */
+.brand-mark{border-radius:8px 8px 13px 13px;box-shadow:0 0 22px #a2efb51a}
+.brand-mark svg,.auth-icon svg{width:25px;height:25px}
+.brand-secondary{color:var(--police-green)}
+.hero-eyebrow,.eyebrow{color:var(--police-green)}
+.auth-intro h1,.landing h1{font-weight:850}
+.auth-panel,.bank-hero{border-top:2px solid #8eda9f}
+.side-brand{color:#a2efb5}
+.btn-primary{background:#a2efb5;color:#0d1c16;box-shadow:0 3px 14px #0002}
+@media(max-width:720px){.topbar .brand-secondary{display:inline}.brand{font-size:10px;letter-spacing:.3px}}

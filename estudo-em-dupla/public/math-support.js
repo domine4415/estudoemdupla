@@ -1,4 +1,4 @@
-/* Estudo em Dupla — fórmulas matemáticas. Usa KaTeX, não interpreta HTML dos usuários. */
+/* ESTUDO POLICIAL — fórmulas matemáticas. Usa KaTeX, não interpreta HTML dos usuários. */
 (() => {
   'use strict';
   const version = '0.16.11';

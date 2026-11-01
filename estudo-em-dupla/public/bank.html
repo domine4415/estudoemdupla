@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#090e19">
-<title>Banco de Questões • Estudo em Dupla</title>
+<title>Banco de Questões • ESTUDO POLICIAL</title>
 <link rel="stylesheet" href="/styles.css"><link rel="stylesheet" href="/bank.css">
 <script src="/bank.js" defer></script>
 <script src="/math-support.js" defer></script>
@@ -11,8 +11,9 @@
 <body>
 <button id="mobileMenu" class="mobile-menu" type="button" aria-label="Abrir navegação" aria-controls="sideNav" aria-expanded="false"><span class="hamburger-lines"></span></button>
 <nav id="sideNav" class="side-nav" aria-label="Navegação principal">
- <a class="side-brand" href="/"><span class="side-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m3 11 9-8 9 8v9H3z"/><path d="M9 20v-7h6v7"/></svg></span><span class="side-label">ESTUDO EM DUPLA</span></a>
+ <a class="side-brand" href="/"><span class="side-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 4 6v6c0 5 8 9 8 9s8-4 8-9V6z"/><path d="m8.5 12 2.3 2.3 4.7-4.8"/></svg></span><span class="side-label">ESTUDO POLICIAL</span></a>
  <a class="side-link selected" href="/banco" data-nav="bank"><span class="side-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v16H6.5A2.5 2.5 0 0 0 4 21z"/><path d="M4 5.5v13A2.5 2.5 0 0 1 6.5 16H20M8 7h8M8 11h6"/></svg></span><span class="side-label">Banco de questões</span></a>
+ <a class="side-link" href="/teoria"><span class="side-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h6a3 3 0 0 1 3 3v14a4 4 0 0 0-4-3H4z"/><path d="M13 7a3 3 0 0 1 3-3h5v14h-4a4 4 0 0 0-4 3M7 8h3M7 12h3M16 8h2M16 12h2"/></svg></span><span class="side-label">Teoria</span></a>
  <button id="statsToggle" class="side-link" type="button" data-nav="stats"><span class="side-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M7 17v-5m5 5V7m5 10v-7"/></svg></span><span class="side-label">Estatísticas</span></button>
  <a class="side-link" href="/" data-nav="rooms"><span class="side-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3"/><path d="M3 19v-2a6 6 0 0 1 12 0v2H3zM17 5a3 3 0 0 1 0 6m1 3a5 5 0 0 1 3 5"/></svg></span><span class="side-label">Salas ao vivo</span></a>
  <a id="createRoomNav" class="side-link hidden" href="/?action=criar"><span class="side-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="3" width="18" height="18" rx="4"/><path d="M12 7v10M7 12h10"/></svg></span><span class="side-label">Criar sala</span></a>
@@ -23,7 +24,7 @@
  <div id="loginRequired" class="bank-login panel hidden"><h2>Entre na sua conta para estudar</h2><p>O banco de questões guarda as suas respostas individualmente.</p><a class="btn btn-primary" href="/">Fazer login →</a></div>
  <div id="pageBody" class="hidden">
    <div class="bank-hero">
-      <div><div class="eyebrow">ESTUDE NO SEU RITMO</div><h1>Banco de <span>questões.</span></h1><p>Escolha uma disciplina e um tópico. Responda quando quiser — sem criar nem entrar em sala.</p></div>
+      <div><div class="eyebrow">PREPARAÇÃO PARA CARREIRAS POLICIAIS</div><h1>Banco de <span>questões.</span></h1><p>Treine por matéria, fortaleça seus conhecimentos e acompanhe sua evolução para a próxima prova.</p></div>
       <button id="adminToggle" class="btn btn-soft hidden" type="button">Gerenciar questões</button>
    </div>
    <div class="bank-stats">

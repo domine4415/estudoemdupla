@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="pt-BR">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#090e19">
+<title>Teoria • ESTUDO POLICIAL</title><link rel="stylesheet" href="/styles.css"><link rel="stylesheet" href="/theory.css"><script src="/theory.js" defer></script></head>
+<body>
+<header class="topbar theory-top"><a class="brand" href="/">ESTUDO <span class="brand-secondary">POLICIAL</span></a><nav aria-label="Navegação"><a href="/banco">Questões</a><a href="/banco#estatisticas">Estatísticas</a><a href="/">Salas</a></nav></header>
+<main>
+<div class="theory-heading"><div><div class="eyebrow">BASE FORTE PARA A SUA APROVAÇÃO</div><h1>Central de <span>teoria.</span></h1><p>Aulas esquematizadas, organizadas por disciplina e tópico.</p></div><button id="newLesson" class="btn btn-primary hidden">+ Criar aula</button></div>
+<p id="notice" role="status"></p><a id="loginLink" class="hidden btn btn-primary" href="/">Entrar na conta</a>
+<section id="library" class="hidden">
+<form id="lessonFilters" class="panel theory-filters"><div><label for="subject">Disciplina</label><select id="subject"><option value="">Todas as disciplinas</option></select></div><div><label for="topic">Tópico</label><select id="topic"><option value="">Todos os tópicos</option></select></div><div><label for="search">Buscar aula</label><input id="search" type="search" placeholder="Título ou assunto"></div><button id="clearFilters" type="button" class="btn btn-soft">Limpar</button></form>
+<p id="catalogCount" class="muted"></p><div id="lessonCards" class="lesson-cards"></div>
+</section>
+<section id="reader" class="hidden"><div class="reader-actions"><button id="back" class="btn btn-soft">← Todas as aulas</button><button id="editLesson" class="btn btn-outline hidden">Editar aula</button><button id="printLesson" class="btn btn-soft">Imprimir / Salvar PDF</button></div><article id="lessonPaper" class="lesson-paper"></article></section>
+<section id="editor" class="panel hidden theory-editor"><div class="reader-actions"><h2>Preparar aula</h2><button id="cancelEdit" class="btn btn-soft">Fechar editor</button></div>
+<form id="lessonForm"><label for="title">Título da aula</label><input id="title" required maxlength="180" placeholder="Ex.: Uso do hífen: regras e exceções">
+<div class="theory-fields"><div><label for="editSubject">Disciplina</label><input id="editSubject" required maxlength="180" list="subjectOptions" placeholder="Ex.: Língua Portuguesa"><datalist id="subjectOptions"></datalist></div><div><label for="editTopic">Tópico</label><input id="editTopic" required maxlength="180" list="topicOptions" placeholder="Ex.: Uso do Hífen"><datalist id="topicOptions"></datalist></div></div>
+<p class="muted">Cole a aula preparada no ChatGPT. Use títulos, listas, tabelas e destaques. A apresentação será padronizada automaticamente.</p>
+<details class="format-help"><summary>Ver modelo de formatação para o ChatGPT</summary><pre># Visão geral
+Texto com **negrito**, ==destaque== e __sublinhado__.
+
+## Regra principal
+- Primeiro ponto
+- Segundo ponto
+
+> ATENÇÃO: uma regra importante ou exceção.
+
+| Caso | Regra | Exemplo |
+| --- | --- | --- |
+| Prefixo | Explicação | Exemplo comentado |
+
+---
+## Resumo para revisão
+1. Primeiro passo
+2. Segundo passo</pre><p>Peça uma aula em Markdown nesse formato. HTML não é necessário.</p></details>
+<label for="content">Conteúdo da aula</label><textarea id="content" required rows="18" maxlength="150000" placeholder="Cole ou escreva aqui a aula esquematizada..."></textarea>
+<label for="imageUpload">Inserir imagem na posição do cursor</label><input id="imageUpload" type="file" accept="image/png,image/jpeg,image/webp"><p class="muted">PNG, JPG ou WebP. As imagens são otimizadas e salvas junto da aula. Limite total: 4 MB após otimização.</p>
+<div class="reader-actions"><button id="previewButton" type="button" class="btn btn-soft">Visualizar aula</button><label class="publish-option"><input id="published" type="checkbox"> Publicar para os alunos</label><button id="saveLesson" type="submit" class="btn btn-primary">Salvar aula</button><button id="deleteLesson" type="button" class="btn btn-outline hidden">Excluir aula</button></div>
+<p id="editorStatus" role="status"></p></form><h3>Prévia da aula</h3><article id="preview" class="lesson-paper"></article></section>
+</main></body></html>

@@ -1,11 +1,12 @@
 'use strict';
-// Estudo em Dupla — servidor Node.js sem dependências externas.
+// ESTUDO POLICIAL — servidor Node.js sem dependências externas.
 const http = require('node:http');
 const fs = require('node:fs');
 const path = require('node:path');
 const crypto = require('node:crypto');
 const PORT = Number(process.env.PORT || 3000);
 const createBankApi = require('./bank-api');
+const createTheoryApi = require('./theory-api');
 const {topicFilter,normalizeTopic}=require('./topic');
 const rooms = new Map();
 // Persistência opcional. Nunca envie SUPABASE_SECRET_KEY para o frontend.
@@ -461,8 +462,10 @@ async function handleApi(req,res,url,user) {
   err(res,404,'Ação não encontrada.');
 }
 const bankApi=createBankApi({databaseRequest,parseJson,send,err,isAdmin,storageEnabled});
+const theoryApi=createTheoryApi({databaseRequest,parseJson,send,err,isAdmin,storageEnabled});
 const files={'/banco':'bank.html','/banco.html':'bank.html','/bank.js':'bank.js','/bank.css':'bank.css','/':'index.html','/index.html':'index.html','/app.js':'app.js','/styles.css':'styles.css'};
 const mime={'.html':'text/html; charset=utf-8','.css':'text/css; charset=utf-8','.js':'application/javascript; charset=utf-8'};
+Object.assign(files,{'/teoria':'theory.html','/theory.js':'theory.js','/theory.css':'theory.css'});
 const server=http.createServer(async(req,res)=>{
   try {
     const url=new URL(req.url,'http://localhost');
@@ -473,6 +476,7 @@ const server=http.createServer(async(req,res)=>{
       const user=await currentUser(req,res);
       if(!user){err(res,401,'Entre na sua conta para acessar as salas.');return;}
       if(url.pathname.startsWith('/api/bank/'))return await bankApi.handle(req,res,url,user);
+      if(url.pathname==='/api/theory'||url.pathname.startsWith('/api/theory/'))return await theoryApi.handle(req,res,url,user);
       return await handleApi(req,res,url,user);
     }
     const filename=files[url.pathname];
@@ -496,7 +500,7 @@ server.on('error',e=>{
   process.exitCode=1;
 });
 server.listen(PORT,'0.0.0.0',()=>{
-  console.log(`Estudo em Dupla disponível em http://localhost:${PORT}`);
+  console.log(`ESTUDO POLICIAL disponível em http://localhost:${PORT}`);
   console.log('Armazenamento: '+(storageEnabled?'Supabase configurado':'temporário (memória) — configure SUPABASE_URL e SUPABASE_SECRET_KEY no Render'));
   console.log('Mantenha esta janela aberta enquanto estiver estudando.');
   if(process.argv.includes('--open')&&process.platform==='win32'){

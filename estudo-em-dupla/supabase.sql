@@ -1,4 +1,4 @@
--- Estudo em Dupla: armazenamento persistente das salas.
+-- ESTUDO POLICIAL: armazenamento persistente das salas.
 -- Execute no SQL Editor do Supabase, uma única vez.
 create table if not exists public.dupla_rooms (
     code text primary key,
