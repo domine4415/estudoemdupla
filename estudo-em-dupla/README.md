@@ -89,3 +89,8 @@ Na edição da aula, copie a resposta do ChatGPT e cole no conteúdo com Ctrl+V.
 É possível colar imagens diretamente no campo. Imagens que vierem como arquivo ou dados são salvas com a aula; imagens copiadas como link HTTPS dependem da disponibilidade e permissão do endereço original. A cópia de um texto não garante que as imagens também venham. O editor informa quando identificar imagens ausentes.
 
 Os modelos opcionais incluem quadros de resumo, mapas com blocos verdes/vermelhos/azuis/amarelos, tabelas e imagens lado a lado. Também é possível importar arquivos .md ou .txt. Não há alteração do banco de dados para essa atualização; publique `public/theory.html`, `public/theory.js` e `public/theory.css`.
+
+
+### Grifos dos usuários
+
+Execute novamente `TEORIA_SQL.sql` atualizado para criar `policial_lesson_highlights`. Publique `server.js`, `theory-api.js` e os arquivos atualizados de `public/`, incluindo `theory-highlights.js`. Na leitura da aula, o usuário seleciona o texto e escolhe amarelo, verde ou azul; para apagar, seleciona o trecho e usa Remover grifo. O salvamento no Supabase é automático e vinculado à conta e à aula. Os grifos podem ser recuperados em outros dispositivos. O servidor sempre usa o usuário autenticado; não aceita outro identificador de conta enviado pelo navegador. Se o texto da aula mudar, grifos cuja posição não corresponde mais ao trecho original não são exibidos.

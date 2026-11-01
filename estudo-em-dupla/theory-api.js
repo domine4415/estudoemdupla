@@ -9,6 +9,30 @@ module.exports=function({databaseRequest,parseJson,send,err,isAdmin,storageEnabl
       try{return await databaseRequest('policial_lessons?'+params,options);}
       catch(e){throw Object.assign(new Error('Não foi possível acessar as aulas. Confira a conexão e se TEORIA_SQL.sql foi executado no Supabase.'),{status:503});}
     }
+    if(op.startsWith('highlights/')&&(req.method==='GET'||req.method==='POST')){
+      const lessonId=op.slice('highlights/'.length);
+      if(!UUID.test(lessonId))return err(res,400,'Aula inválida.');
+      const params=new URLSearchParams({select:'id',id:'eq.'+lessonId});if(!admin)params.set('published','eq.true');
+      const lessons=await (await query(params)).json();if(!lessons.length)return err(res,404,'Aula não encontrada.');
+      const filter=new URLSearchParams({select:'marks',user_id:'eq.'+user.id,lesson_id:'eq.'+lessonId});
+      try{
+        if(req.method==='GET'){
+          const rows=await (await databaseRequest('policial_lesson_highlights?'+filter)).json();
+          return send(res,200,{marks:rows[0]?.marks||[]});
+        }
+        const body=await parseJson(req);
+        if(!Array.isArray(body.marks)||body.marks.length>500||JSON.stringify(body.marks).length>500000)return err(res,400,'Quantidade ou tamanho de grifos acima do limite.');
+        const marks=[];
+        for(const m of body.marks){
+          if(!m||!Number.isInteger(m.start)||!Number.isInteger(m.end)||m.start<0||m.end<=m.start||m.end>1000000||!['amarelo','verde','azul'].includes(m.color)||typeof m.quote!=='string'||m.quote.length!==m.end-m.start)return err(res,400,'Grifo inválido.');
+          marks.push({start:m.start,end:m.end,color:m.color,quote:m.quote});
+        }
+        marks.sort((a,b)=>a.start-b.start);
+        if(marks.some((m,i)=>i&&m.start<marks[i-1].end))return err(res,400,'Os grifos não podem se sobrepor.');
+        await databaseRequest('policial_lesson_highlights?on_conflict=user_id,lesson_id',{method:'POST',headers:{Prefer:'resolution=merge-duplicates,return=minimal'},body:JSON.stringify({user_id:user.id,lesson_id:lessonId,marks,updated_at:new Date().toISOString()})});
+        return send(res,200,{ok:true});
+      }catch(e){throw Object.assign(new Error('Não foi possível acessar seus grifos. Confira a conexão e execute TEORIA_SQL.sql atualizado no Supabase.'),{status:503});}
+    }
     if(req.method==='GET'&&!op){
       const params=new URLSearchParams({select:'id,title,subject,topic,published,updated_at',order:'subject,topic,title,id',limit:'1000'});
       if(!admin)params.set('published','eq.true');
