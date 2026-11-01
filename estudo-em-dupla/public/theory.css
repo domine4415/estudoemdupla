@@ -36,3 +36,8 @@
 .lesson-paper mark[data-personal-highlight="verde"]{background:#a9e8b4}
 .lesson-paper mark[data-personal-highlight="azul"]{background:#aed5ff}
 @media print{.lesson-paper mark[data-personal-highlight]{print-color-adjust:exact;-webkit-print-color-adjust:exact}}
+
+.highlight-tools[hidden]{display:none}
+.highlight-tools{position:fixed;top:auto;bottom:20px;left:50%;transform:translateX(-50%);width:max-content;max-width:calc(100vw - 24px);justify-content:center}
+#highlightStatus:empty{display:none}
+@media(max-width:600px){.highlight-tools{bottom:12px;padding:10px;gap:6px}.highlight-tools button{font-size:12px;padding:8px}}
