@@ -77,6 +77,15 @@ Se login ou gravação falharem, confira as variáveis, tabelas, confirmação d
 
 Execute `TEORIA_SQL.sql` no SQL Editor do Supabase para criar a tabela de aulas (sem alterar as questões ou salas). Publique também `theory-api.js`, `server.js`, a pasta `public` atualizada e os demais arquivos necessários do projeto.
 
-Acesse **Teoria** na página inicial ou no menu do banco. O administrador verá **Criar aula**. Informe título, disciplina e tópico, cole o conteúdo em Markdown e use **Inserir imagem** para adicionar PNG, JPG ou WebP na posição do cursor. Imagens são otimizadas e guardadas na própria aula, até 4 MB no total. O modelo de formatação fica no editor. HTML colado aparece como texto; use títulos, listas, tabelas e destaques do modelo.
+Acesse **Teoria** na página inicial ou no menu do banco. O administrador verá **Criar aula**. Informe título, disciplina e tópico, cole o conteúdo em Markdown e use **Inserir imagem** para adicionar PNG, JPG ou WebP na posição do cursor. Imagens são otimizadas e guardadas na própria aula, até 4 MB no total. O modelo de formatação fica no editor. Ao colar com Ctrl+V, o editor converte conteúdo formatado ou HTML para o formato seguro das aulas. Títulos, listas, tabelas e quadros identificáveis são aproveitados; código ativo não é executado.
 
 Confira a prévia e salve como rascunho ou marque **Publicar para os alunos**. Só administradores podem ver rascunhos, editar e excluir. Alunos autenticados podem filtrar e abrir as aulas publicadas. **Imprimir / Salvar PDF** permite usar a impressão do navegador para exportação. O formato visual das aulas é padronizado automaticamente, incluindo a página de impressão.
+
+
+### Copiar aulas e quadros do ChatGPT
+
+Na edição da aula, copie a resposta do ChatGPT e cole no conteúdo com Ctrl+V. A conversão aproveita a formatação disponível na área de transferência e mostra a prévia automaticamente. Quadros com bordas ou cores e grades identificáveis são convertidos para blocos padronizados. Uma cópia apenas em texto não inclui as cores ou o desenho original; para garantir mapas e quadros específicos, use o botão **Copiar instruções para o ChatGPT**, gere a aula e cole a resposta inteira. Não é preciso montar cada bloco manualmente.
+
+É possível colar imagens diretamente no campo. Imagens que vierem como arquivo ou dados são salvas com a aula; imagens copiadas como link HTTPS dependem da disponibilidade e permissão do endereço original. A cópia de um texto não garante que as imagens também venham. O editor informa quando identificar imagens ausentes.
+
+Os modelos opcionais incluem quadros de resumo, mapas com blocos verdes/vermelhos/azuis/amarelos, tabelas e imagens lado a lado. Também é possível importar arquivos .md ou .txt. Não há alteração do banco de dados para essa atualização; publique `public/theory.html`, `public/theory.js` e `public/theory.css`.
