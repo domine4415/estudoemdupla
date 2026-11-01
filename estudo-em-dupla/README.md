@@ -1,67 +1,73 @@
 # Estudo em Dupla
 
-Aplicativo de estudos que importa o **JSON que você já captura**, separa os enunciados das alternativas e permite que duas pessoas respondam às mesmas questões, em tempo real.
+Aplicativo Node.js com salas de estudo ao vivo, banco individual de questões, login e histórico no Supabase.
 
-## Começar no computador
+## Executar no computador
 
-1. Instale o **Node.js 20 ou superior**: https://nodejs.org/
-2. Extraia esta pasta ZIP. No Windows, clique duas vezes em `INICIAR_WINDOWS.bat` (não abra `index.html` diretamente).
-3. Abra um terminal dentro da pasta `estudo-em-dupla` e execute:
+Instale Node.js 20 ou superior. Abra `INICIAR_WINDOWS.bat` ou execute `npm start` nesta pasta. Acesse http://localhost:3000 e mantenha o servidor aberto. Não abra os arquivos HTML diretamente.
 
-   ```bash
-   node server.js
-   ```
+Não é necessário instalar bibliotecas para executar: o servidor usa recursos nativos do Node.js. O login e o banco permanente dependem da configuração do Supabase.
 
-4. Abra http://localhost:3000 no navegador.
-5. Clique em **Criar sala**, selecione seu arquivo `.json` e aguarde a importação. O arquivo de captura original é aceito **sem precisar editar**.
-6. Clique em **Copiar link** para enviar ao amigo.
+## Configurar Supabase
 
-**Importante:** `localhost` funciona só no seu computador. Para seu amigo entrar em **outra rede** pelo celular, publique este projeto em um servidor Node.js com URL HTTPS, como Render, Railway ou similar. Se os dois estiverem na mesma rede Wi-Fi, o amigo pode abrir `http://IP-DO-SEU-COMPUTADOR:3000/?room=CODIGO`, desde que o firewall permita.
+No SQL Editor do seu projeto, execute os arquivos necessários nesta ordem:
 
-## Publicar online (exemplo em serviço com suporte a Node.js)
+1. `supabase.sql`: armazenamento das salas.
+2. `BANCO_SQL.sql`: questões, respostas individuais e funções de estatísticas.
+3. `ATIVAR_ID_UNICO.sql`: identifica questões pelo código original e reúne duplicatas, preservando as tentativas. Faça backup antes, pois esse script altera registros existentes.
+4. `ATIVAR_EXCLUSAO_LOTES.sql`: rastreamento das novas importações para exclusão por lote.
 
-- Envie os arquivos deste projeto para um repositório privado no GitHub, sem subir JSON de questões ou outros dados pessoais.
-- Crie um serviço web Node.js apontando para o repositório.
-- Comando de inicialização: `node server.js`.
-- Configure a variável de ambiente `PORT` caso a hospedagem exija (a maioria fornece automaticamente).
-- Use o endereço HTTPS público gerado pelo serviço. Assim o link de sala abre também no celular em outra rede.
+Os scripts são mantidos para instalação e manutenção; não são executados automaticamente pelo aplicativo. Não é necessário executá-los novamente só por publicar mudanças de interface.
 
-Este protótipo **não tem banco de dados**. As salas, questões e respostas ficam **em memória** no servidor. Reiniciar o serviço apaga as salas; salas inativas expiram após 12 horas. Não há autenticação por conta, criptografia local nem controle completo de acesso: não use para dados sensíveis. O endereço HTTPS fornece proteção de transporte quando configurado pela hospedagem.
+Em Authentication, habilite o provedor Email. Configure a Site URL com o endereço do aplicativo. Se a confirmação de e-mail estiver habilitada, confirme a conta antes de entrar.
 
-## O que ele faz
+Configure as variáveis no ambiente do servidor:
 
-- Importa JSON no formato exportado pelo seu capturador, com os campos `statement`, `statementHtml`, `alternatives`, `type`, `metadata`, `result`.
-- Aproveita o HTML para capturar apenas o enunciado, sem menus, e recuperar banca, concurso, ano e ID original.
-- Remove a repetição da letra nas alternativas (`A A resposta...` vira `A resposta...`).
-- Reconhece questões de **certo ou errado** e acrescenta os botões **Certo / Errado** quando o JSON não os possui.
-- Permite corrigir manualmente as questões mal capturadas.
-- Salva as respostas independentes do anfitrião e do amigo. As escolhas são reveladas automaticamente após ambos responderem, ou manualmente pelo anfitrião.
-- Avança e volta nas questões, sincronizando os dois dispositivos.
-- Permite definir um gabarito manualmente; calcula pontuação somente quando há gabarito.
-- Exporta uma versão limpa e organizada do JSON.
+| Variável | Finalidade |
+|---|---|
+| `SUPABASE_URL` | URL do projeto Supabase |
+| `SUPABASE_SECRET_KEY` | Chave secreta, utilizada somente no servidor |
+| `SUPABASE_PUBLISHABLE_KEY` | Chave pública para autenticação |
+| `ADMIN_EMAIL` | E-mail da conta administradora; há um padrão definido em `server.js` |
+| `ADMIN_USER_ID` | Opcional: restringe o administrador ao UUID da conta |
+| `PORT` | Porta do servidor; padrão 3000 |
 
-## Limitações
+A conta administradora precisa ter e-mail confirmado. Não publique chaves secretas ou arquivos `.env`. Sem Supabase configurado, as salas usam memória e o banco permanente fica indisponível; o uso autenticado exige configurar o login.
 
-- **Não captura nada diretamente do TEC**: o aplicativo apenas aceita o arquivo `.json` fornecido por você.
-- O arquivo original de exemplo tem **dois registros**. Na segunda questão as alternativas chegam vazias, mas como `type: true_false` o app acrescenta Certo / Errado.
-- Um `result: null` significa que **não há gabarito importado**. O app não inventa a resposta.
-- É recomendado revisar visualmente os enunciados que vierem truncados no próprio JSON.
-- O conteúdo de terceiros só deve ser reutilizado ou compartilhado conforme as permissões e os termos aplicáveis.
+## Publicar
 
-## Estrutura
+Envie o projeto ao GitHub mantendo `server.js`, `bank-api.js`, `topic.js`, `package.json` e a pasta `public` na mesma estrutura. No Render, use um serviço web Node.js com `npm install` como comando de construção e `npm start` como inicialização. O arquivo `render.yaml` também descreve o serviço.
 
-- `server.js` — servidor Node.js de sala e sincronização por SSE
-- `public/index.html` — telas de criação, entrada e simulado
-- `public/app.js` — importador, limpeza do JSON, navegação e votação
-- `public/styles.css` — visual responsivo para computador e celular
+O Root Directory deve apontar para a pasta que contém `package.json`: deixe vazio se os arquivos estão na raiz do repositório; use `estudo-em-dupla` se estão nessa subpasta. Configure as variáveis do Supabase no serviço.
 
-Não há instalação de pacotes: o aplicativo usa somente recursos nativos do Node.js e do navegador.
+Após publicar, aguarde o serviço ficar disponível e atualize o navegador. `/api/health` informa o estado de configuração do armazenamento e da autenticação; também teste login, banco e salas para verificar o funcionamento completo.
 
-## Se aparecer “Failed to fetch” ou “Não foi possível conectar ao servidor”
+## Utilizar
 
-- **Não abra `public/index.html` diretamente** e não use a visualização estática de um editor ou serviço de hospedagem. As salas só funcionam com o servidor Node.js em execução.
-- No Windows, inicie o arquivo `INICIAR_WINDOWS.bat` e **mantenha a janela do terminal aberta**.
-- No navegador do PC, acesse exatamente **http://localhost:3000**. Não confunda com `file:///`, `localhost:5500` ou outro endereço.
-- Caso o `INICIAR_WINDOWS.bat` feche ou exiba um erro, copie o texto do terminal. A porta 3000 pode estar ocupada ou o Node.js pode não estar instalado.
-- **Se estiver hospedado online**, o servidor Node.js precisa estar publicado também. Apenas publicar os arquivos da pasta `public/` não funciona para criar salas.
-- Se a página abre mas o erro persiste, experimente **http://localhost:3000/api/health**. O resultado correto é `{"status":"ok"}`.
+- **Banco de questões:** filtre, responda e consulte gabarito e comentário. O histórico é individual.
+- **Estatísticas:** filtre por matéria, tópico, banca e período das respostas. Acertos e erros consideram a última resposta de cada questão dentro do período, no horário de Brasília.
+- **Administrador:** em Gerenciar questões, importe JSON, crie e edite questões, renomeie tópicos e exclua seleções. Questões sem gabarito ficam como rascunho.
+- **Renomear tópico:** selecione a disciplina, o tópico atual e o novo nome. Para reunir tópicos, use o mesmo novo nome em cada um. As respostas são preservadas.
+- **Salas:** o administrador cria e controla a sala; outra conta entra como convidada. É possível importar JSON ou carregar questões publicadas no banco.
+- **Alternativas:** dois cliques rápidos riscam ou desriscam uma alternativa. A marcação é temporária no navegador.
+
+Importe somente questões próprias ou com autorização de disponibilização. `exemplo_questoes_autorais.json` serve para testar o formato. `PROMPTQUESTÕES.txt` é um material auxiliar para preparar questões; não é utilizado pelo servidor.
+
+## Arquivos
+
+| Arquivo ou pasta | Uso |
+|---|---|
+| `server.js` | Servidor, autenticação, salas e entrega das páginas |
+| `bank-api.js` | Banco de questões e operações administrativas |
+| `topic.js` | Normalização e filtros de tópicos |
+| `public/` | Páginas, estilos e funcionalidades no navegador |
+| `package.json` | Comando de inicialização e versão mínima do Node.js |
+| `render.yaml` | Configuração de publicação |
+| `INICIAR_WINDOWS.bat` | Inicialização local no Windows |
+| `*.sql` | Instalação e manutenção do banco |
+
+## Resolver problemas
+
+Se não conectar, confira se o servidor está aberto e se você está usando o endereço dele, em vez de abrir HTML diretamente. Na hospedagem, publique o projeto completo: enviar apenas `public/` não executa o servidor.
+
+Se login ou gravação falharem, confira as variáveis, tabelas, confirmação do e-mail e os registros do serviço. Mantenha os JSONs originais e backups do Supabase. Salas antigas podem depender do token salvo no navegador original; novas salas são associadas às contas.

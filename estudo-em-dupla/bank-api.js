@@ -137,8 +137,24 @@ module.exports=function createBankApi({databaseRequest,parseJson,send,err,isAdmi
         alternatives:q.alternatives});
     }
     if(op==='statistics'&&req.method==='GET'){
-      const questions=await json('dupla_bank_questions?'+new URLSearchParams({select:'id,subject,topic',published:'eq.true',limit:'100000'}));
-      const attempts=await json('dupla_bank_attempts?'+new URLSearchParams({select:'id,question_id,is_correct,answered_at',user_id:'eq.'+user.id,order:'answered_at.desc,id.desc',limit:'100000'}));
+      const qp=new URLSearchParams({select:'id,subject,topic',published:'eq.true',order:'id'});
+      for(const field of ['subject','topic','board']){
+        const value=trimmed(url.searchParams.get(field),180);
+        if(value)qp.set(field,field==='topic'?topicFilter(value):'eq.'+value);
+      }
+      const start=url.searchParams.get('start')||'',end=url.searchParams.get('end')||'';
+      const validDate=value=>/^\d{4}-\d{2}-\d{2}$/.test(value)&&Number.isFinite(Date.parse(value))&&new Date(value).toISOString().slice(0,10)===value;
+      if((start&&!validDate(start))||(end&&!validDate(end))||(start&&end&&start>end))return err(res,400,'Informe um período válido: a data inicial deve ser anterior ou igual à final.');
+      const ap=new URLSearchParams({select:'id,question_id,is_correct,answered_at',user_id:'eq.'+user.id,order:'answered_at.desc,id.desc'});
+      if(start)ap.append('answered_at','gte.'+start+'T00:00:00-03:00');
+      if(end){const next=new Date(end+'T00:00:00Z');next.setUTCDate(next.getUTCDate()+1);ap.append('answered_at','lt.'+next.toISOString().slice(0,10)+'T00:00:00-03:00');}
+      async function allRows(table,params){
+        const result=[];params.set('limit','1000');
+        for(let offset=0;;offset+=1000){params.set('offset',String(offset));const batch=await json(table+'?'+params);result.push(...batch);if(batch.length<1000)return result;}
+      }
+      const [questions,history]=await Promise.all([allRows('dupla_bank_questions',qp),allRows('dupla_bank_attempts',ap)]);
+      const ids=new Set(questions.map(q=>q.id));
+      const attempts=history.filter(a=>ids.has(a.question_id));
       const latest=new Map();for(const a of attempts)if(!latest.has(a.question_id))latest.set(a.question_id,a);
       const groups=new Map();
       for(const q of questions){let g=groups.get(q.subject);if(!g){g={subject:q.subject,total:0,answered:0,correct:0,wrong:0};groups.set(q.subject,g);}g.total++;

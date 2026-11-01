@@ -63,7 +63,16 @@
    </div>
    <section id="statsPane" class="hidden panel bank-admin">
      <div class="admin-heading"><div><div class="eyebrow">MEU DESEMPENHO</div><h2>Estatísticas de estudo</h2><p>Resultados individuais das questões resolvidas, por disciplina. Consideramos a resposta mais recente em cada questão.</p></div><button id="statsBack" class="btn btn-soft" type="button">← Voltar às questões</button></div>
-     <div id="statsSummary" class="bank-stats"></div><h3>Desempenho por disciplina</h3><div id="statsSubjects" class="stats-subjects"></div>
+     <form id="statsFilters" class="stats-filters">
+       <div><label for="statsSubject">Matéria</label><select id="statsSubject"><option value="">Todas as matérias</option></select></div>
+       <div><label for="statsTopic">Tópico</label><select id="statsTopic"><option value="">Todos os tópicos</option></select></div>
+       <div><label for="statsBoard">Banca</label><select id="statsBoard"><option value="">Todas as bancas</option></select></div>
+       <div><label for="statsStart">Respondidas a partir de</label><input id="statsStart" type="date"></div>
+       <div><label for="statsEnd">Respondidas até</label><input id="statsEnd" type="date"></div>
+       <div class="stats-filter-actions"><button id="statsApply" class="btn btn-primary" type="submit">Aplicar filtros</button><button id="statsClear" class="btn btn-soft" type="button">Limpar</button></div>
+     </form>
+     <p class="bank-note">O período considera a data das respostas, no horário de Brasília, incluindo o dia final. Acertos e erros usam a última resposta de cada questão dentro do período. Questões disponíveis considera os filtros de matéria, tópico e banca.</p>
+     <div id="statsSummary" class="bank-stats" role="status"></div><h3>Desempenho por disciplina</h3><div id="statsSubjects" class="stats-subjects"></div>
    </section>
    <section id="adminPane" class="hidden bank-admin panel">
       <div class="admin-heading"><div><div class="eyebrow">EXCLUSIVO DO ADMINISTRADOR</div><h2>Gerenciar banco de questões</h2><p>Importe questões autorais ou autorizadas com gabarito e comentários próprios. As incompletas ficam como rascunho.</p></div><button id="backToStudy" class="btn btn-soft">← Voltar ao banco</button></div>

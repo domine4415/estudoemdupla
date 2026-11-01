@@ -12,6 +12,8 @@ a.brand{text-decoration:none}.bank-topbar{gap:14px}.bank-nav{display:flex;align-
 .stats-subject-heading span{color:#91abc0;font-size:12px}
 .stats-track{width:100%;height:9px;border-radius:20px;background:#304158;overflow:hidden}
 .stats-track-fill{height:100%;border-radius:20px;background:#9debb6}
+.stats-filters{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-bottom:18px;align-items:end}
+.stats-filter-actions{display:flex;gap:8px;flex-wrap:wrap}
 @media(max-width:720px){.bank-layout{grid-template-columns:1fr}.bank-question{grid-column:1}.bank-nav-button{padding:9px 5px}}
 
 /* V3: 10 questões completas e navegação retrátil */

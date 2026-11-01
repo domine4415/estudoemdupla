@@ -352,18 +352,28 @@ async function renameTopic(){
     if(currentId)await openQuestion(currentId);
   }catch(e){status.textContent=e.message;notify(e.message,true);await loadDeleteFilters();}
 }
+function fillStatsTopics(){
+  const subject=$('statsSubject').value;
+  fillDropdown('statsTopic',[...new Set((filters.pairs||[]).filter(p=>!subject||p.subject===subject).map(p=>p.topic))].sort((a,b)=>a.localeCompare(b,'pt-BR')),'Todos os tópicos');
+}
+let statsGeneration=0;
 async function showStats(){
+  const generation=++statsGeneration;
   $('studyPane').classList.add('hidden');$('adminPane').classList.add('hidden');$('statsPane').classList.remove('hidden');
+  fillDropdown('statsSubject',filters.subjects,'Todas as matérias');fillDropdown('statsBoard',filters.boards,'Todas as bancas');fillStatsTopics();
+  const params=new URLSearchParams();
+  for(const [key,id] of [['subject','statsSubject'],['topic','statsTopic'],['board','statsBoard'],['start','statsStart'],['end','statsEnd']])if($(id).value)params.set(key,$(id).value);
+  if($('statsStart').value&&$('statsEnd').value&&$('statsStart').value>$('statsEnd').value){notify('A data inicial deve ser anterior ou igual à final.',true);return;}
   $('statsSummary').textContent='Carregando...';$('statsSubjects').replaceChildren();
-  try{const d=await api('bank/statistics');const pct=d.answered?Math.round(d.correct/d.answered*100):0;
+  try{const d=await api('bank/statistics?'+params);if(generation!==statsGeneration)return;const pct=d.answered?Math.round(d.correct/d.answered*100):0;
     $('statsSummary').replaceChildren();
     for(const [label,value] of [['Questões disponíveis',d.total],['Questões resolvidas',d.answered],['Acertos',d.correct],['Erros',d.wrong],['Taxa de acertos',pct+'%'],['Tentativas realizadas',d.attempts]]){
       const card=elt('div','bank-stat');card.append(elt('strong','',String(value)),elt('span','',label));$('statsSummary').append(card);
     }
-    if(!d.subjects.length)$('statsSubjects').append(elt('p','bank-note','Nenhuma disciplina cadastrada.'));
+    if(!d.subjects.length)$('statsSubjects').append(elt('p','bank-note','Nenhuma questão encontrada com os filtros selecionados.'));
     for(const item of d.subjects){const box=elt('div','stats-subject');const label=elt('div','stats-subject-heading');label.append(elt('strong','',item.subject),elt('span','',`${item.correct} acertos • ${item.wrong} erros • ${item.answered}/${item.total} resolvidas`));
       const track=elt('div','stats-track');const bar=elt('div','stats-track-fill');bar.style.width=(item.answered?Math.round(item.correct/item.answered*100):0)+'%';track.append(bar);box.append(label,track);$('statsSubjects').append(box);}
-  }catch(e){$('statsSummary').textContent='Não foi possível carregar as estatísticas: '+e.message;}
+  }catch(e){if(generation===statsGeneration)$('statsSummary').textContent='Não foi possível carregar as estatísticas: '+e.message;}
 }
 async function boot(){
   try{
@@ -372,6 +382,9 @@ async function boot(){
     $('adminToggle').classList.toggle('hidden',!admin);
   }catch(e){$('loginRequired').classList.remove('hidden');return;}
   $('statsToggle').onclick=async()=>{showStats();document.getElementById('sideNav').classList.remove('open');document.getElementById('menuShade').hidden=true;};
+  $('statsSubject').onchange=fillStatsTopics;
+  $('statsFilters').onsubmit=e=>{e.preventDefault();showStats();};
+  $('statsClear').onclick=()=>{$('statsFilters').reset();fillStatsTopics();showStats();};
   $('mobileMenu').onclick=()=>{const open=$('sideNav').classList.toggle('open');$('menuShade').hidden=!open;$('mobileMenu').setAttribute('aria-expanded',String(open));};
   $('menuShade').onclick=()=>{$('sideNav').classList.remove('open');$('menuShade').hidden=true;$('mobileMenu').setAttribute('aria-expanded','false');};$('statsBack').onclick=()=>{$('statsPane').classList.add('hidden');$('studyPane').classList.remove('hidden');loadList();};
   $('applyFilter').onclick=applyFreshFilter;$('filterSearch').onkeydown=e=>{if(e.key==='Enter')applyFreshFilter();};
