@@ -84,7 +84,7 @@ function navigateTheory(subject='',topic='',subtopic=null){
 }
 function cards(){
   const search=$('search').value.trim().toLocaleLowerCase('pt-BR');
-  const root=$('lessonCards');root.replaceChildren();const crumbs=$('theoryBreadcrumbs');crumbs.replaceChildren();
+  const root=$('lessonCards');root.classList.toggle('contest-grid',browse.contest===null&&!search);root.replaceChildren();const crumbs=$('theoryBreadcrumbs');crumbs.replaceChildren();
   function crumb(label,action){const button=el('button',label);button.type='button';button.className='btn btn-soft btn-small';button.onclick=action;crumbs.append(button);}
   crumb('Todos os concursos',()=>navigateContest(null));
   if(browse.contest!==null)crumb(browse.contest==='geral'?'Conteúdo geral':contests.find(c=>c.id===browse.contest)?.name||'Concurso',()=>navigateTheory());

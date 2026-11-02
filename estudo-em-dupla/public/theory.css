@@ -54,3 +54,9 @@
 .lesson-card .contest-cover{display:block;align-self:center;width:calc(100% + 48px);max-width:none;aspect-ratio:16/9;height:auto;object-fit:cover;object-position:center;background:#0c1625;border-radius:14px 14px 0 0;margin:-24px -24px 8px;flex-shrink:0}.lesson-card:has(.contest-cover:not([hidden])){overflow:hidden}.contest-cover[hidden]{display:none!important}#contestDialog label{display:block;margin:18px 0 8px;font-size:13px}#contestDialog .muted{font-size:12px;line-height:1.6}
 
 .contest-choices{border:1px solid #34465d;border-radius:9px;padding:14px;margin:18px 0}.contest-choices legend{font-size:13px;color:#bdcce0}.theory-editor .contest-choice{display:flex;gap:10px;align-items:center;margin:10px 0}.contest-choice input{width:18px;height:18px;flex:0 0 18px;accent-color:#a2efb5}#editContest{max-height:240px;overflow-y:auto}
+
+.lesson-cards.contest-grid{grid-template-columns:repeat(auto-fill,minmax(0,250px));justify-content:start;align-items:start;gap:18px}
+.contest-grid .lesson-card{width:100%;min-width:0;padding:18px;gap:9px}
+.contest-grid .lesson-card .contest-cover{width:calc(100% + 36px);aspect-ratio:4/3;margin:-18px -18px 6px}
+.contest-grid .lesson-card h2{font-size:18px}
+@media(max-width:560px){.lesson-cards.contest-grid{grid-template-columns:repeat(auto-fill,minmax(0,min(250px,100%)))}}
