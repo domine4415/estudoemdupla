@@ -294,6 +294,7 @@ async function saveEdit(e){e.preventDefault();
 }
 
 function leaveRoom(message=''){
+  window.roomBrowse?.close(false);
   window.roomScreen?.stop();window.roomVoice?.stop();window.roomChat?.stop();
   if(code&&token)request('/leave','POST',credentials()).catch(()=>{});
   if(es){es.close();es=null;}
@@ -381,7 +382,7 @@ $('closeDialog').addEventListener('click',()=>$('editDialog').close());
 $('exportJson').addEventListener('click',downloadNormalized);
 $('bankRoomSubject').addEventListener('change',populateRoomBankTopics);
 $('importFromBank').addEventListener('click',importBankIntoRoom);
-$('exitRoom').addEventListener('click',()=>leaveRoom());
+$('exitRoom').addEventListener('click',()=>leaveRoom());$('exitRoomTop').addEventListener('click',()=>leaveRoom());
 async function checkBackend(){
   const notice=$('serverNotice');
   try{

@@ -21,6 +21,12 @@
     menu.onclick=()=>{const open=nav.classList.toggle('is-open');shade.hidden=!open;menu.setAttribute('aria-expanded',String(open));};
     document.addEventListener('keydown',event=>{if(event.key==='Escape')close();});
   }
+  window.addEventListener('room-return-to-room',()=>{
+    close();existing?.classList.remove('open');
+    const bankShade=document.getElementById('menuShade');if(bankShade)bankShade.hidden=true;
+    document.getElementById('mobileMenu')?.setAttribute('aria-expanded','false');
+    const focused=document.activeElement;if(focused?.closest('.app-sidebar,.side-nav'))focused.blur();
+  });
   function update(){
     const params=new URLSearchParams(location.search),workspace=document.getElementById('workspace');
     const home=['/','/index.html'].includes(location.pathname)&&!params.has('room')&&!params.has('view')&&!params.has('action')&&(!workspace||workspace.classList.contains('hidden'));
