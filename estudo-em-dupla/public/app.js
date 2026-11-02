@@ -63,8 +63,8 @@ async function request(endpoint,method='GET',body){
 }
 function credentials(){return role==='host'?{hostToken:token}:{token};}
 function roomLink(){return location.origin+'/?room='+encodeURIComponent(code);}
-function setSession(c,t,r){if(!signedIn){showAuthMessage('Entre na conta antes de acessar a sala.',true);return;}code=c;token=t;role=r;localStorage.setItem('dupla_'+code,JSON.stringify({token,role}));localStorage.setItem('dupla_last_room',code);history.replaceState(null,'','/?room='+code);$('landing').classList.add('hidden');$('workspace').classList.remove('hidden');$('topRoom').classList.remove('hidden');$('roomQuickNav').classList.remove('hidden');$('roomCode').textContent=code;document.body.classList.toggle('guest',role==='guest');$('roomTitle').textContent=role==='host'?'Sala '+code:'Sala '+code;window.roomVoice?.setup({role:r,send:signal=>request('/voice','POST',{...credentials(),signal}),config:()=>request('/voice-config?token='+encodeURIComponent(token))});window.roomChat?.setup({self:()=>view?.myUserId,get:()=>request('/chat'),send:text=>request('/chat','POST',{...credentials(),text})});connect();refresh();}
-function connect(){if(es)es.close();es=new EventSource('/api/room/'+encodeURIComponent(code)+'/events?token='+encodeURIComponent(token));es.addEventListener('refresh',()=>refresh());es.addEventListener('expelled',()=>leaveRoom('Você foi expulso da sala pelo dono.'));es.addEventListener('chat',event=>{try{window.roomChat?.receive(JSON.parse(event.data));}catch{}});es.addEventListener('voice',event=>{try{window.roomVoice?.receive(JSON.parse(event.data));}catch{}});es.onerror=()=>{};}
+function setSession(c,t,r){if(!signedIn){showAuthMessage('Entre na conta antes de acessar a sala.',true);return;}code=c;token=t;role=r;localStorage.setItem('dupla_'+code,JSON.stringify({token,role}));localStorage.setItem('dupla_last_room',code);history.replaceState(null,'','/?room='+code);$('landing').classList.add('hidden');$('workspace').classList.remove('hidden');$('topRoom').classList.remove('hidden');$('roomQuickNav').classList.remove('hidden');$('roomCode').textContent=code;document.body.classList.toggle('guest',role==='guest');$('roomTitle').textContent=role==='host'?'Sala '+code:'Sala '+code;window.roomScreen?.setup({send:signal=>request('/voice','POST',{...credentials(),signal}),config:()=>request('/voice-config?token='+encodeURIComponent(token))});window.roomVoice?.setup({role:r,send:signal=>request('/voice','POST',{...credentials(),signal}),config:()=>request('/voice-config?token='+encodeURIComponent(token))});window.roomChat?.setup({self:()=>view?.myUserId,get:()=>request('/chat'),send:text=>request('/chat','POST',{...credentials(),text})});connect();refresh();}
+function connect(){if(es)es.close();es=new EventSource('/api/room/'+encodeURIComponent(code)+'/events?token='+encodeURIComponent(token));es.addEventListener('refresh',()=>refresh());es.addEventListener('expelled',()=>leaveRoom('Você foi expulso da sala pelo dono.'));es.addEventListener('chat',event=>{try{window.roomChat?.receive(JSON.parse(event.data));}catch{}});es.addEventListener('voice',event=>{try{const signal=JSON.parse(event.data);if(signal.media==='screen'||signal.session==='*')window.roomScreen?.receive(signal);if(signal.media!=='screen')window.roomVoice?.receive(signal);}catch{}});es.onerror=()=>{};}
 let ongoing=null,refreshQueued=false;
 async function refresh(){
   if(ongoing){refreshQueued=true;return ongoing;}
@@ -293,7 +293,7 @@ async function saveEdit(e){e.preventDefault();
 }
 
 function leaveRoom(message=''){
-  window.roomVoice?.stop();window.roomChat?.stop();
+  window.roomScreen?.stop();window.roomVoice?.stop();window.roomChat?.stop();
   if(code&&token)request('/leave','POST',credentials()).catch(()=>{});
   if(es){es.close();es=null;}
   if(code){localStorage.removeItem('dupla_'+code);}
@@ -472,7 +472,7 @@ async function boot(){
   $('tabRegister').addEventListener('click',()=>switchAuthMode('register'));
   $('authForm').addEventListener('submit',onAuthSubmit);
   $('logout').addEventListener('click',async()=>{
-    window.roomVoice?.stop();window.roomChat?.stop();
+    window.roomScreen?.stop();window.roomVoice?.stop();window.roomChat?.stop();
     if(code&&token)try{await request('/leave','POST',credentials());}catch{}
     try{await fetch('/api/community/offline',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});}catch{}
     try {await authFetch('logout','POST',{});}catch(e){alertUser(e.message,true);return;}

@@ -86,7 +86,7 @@ module.exports=function({rooms,databaseRequest,storageEnabled,parseJson,send,err
       if(action==='voice'){
         const s=body.signal;if(!s||!['ready','offer','answer','leave'].includes(s.type)||typeof s.session!=='string'||s.session.length>80||s.to!==undefined&&typeof s.to!=='string')return err(res,400,'Sinal de áudio inválido.');
         if(['offer','answer'].includes(s.type)&&(typeof s.sdp!=='string'||s.sdp.length>50000||!r.members.some(x=>x.userId===s.to)))return err(res,400,'Sinal de áudio inválido.');
-        for(const c of r.clients)if(c.roomUserId!==user.id&&(!s.to||c.roomUserId===s.to))try{c.write('event: voice\ndata: '+JSON.stringify({from:user.id,type:s.type,session:s.session,to:s.to,sdp:s.sdp})+'\n\n');}catch{}
+        for(const c of r.clients)if(c.roomUserId!==user.id&&(!s.to||c.roomUserId===s.to))try{c.write('event: voice\ndata: '+JSON.stringify({from:user.id,type:s.type,session:s.session,to:s.to,sdp:s.sdp,media:s.media==='screen'?'screen':'audio',sharing:s.sharing===true})+'\n\n');}catch{}
         return send(res,200,{ok:true});
       }
       if(action==='leave'){

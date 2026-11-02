@@ -4,10 +4,10 @@
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#090e19">
 <title>Banco de Questões • ESTUDO POLICIAL</title>
-<link rel="stylesheet" href="/styles.css"><link rel="stylesheet" href="/bank.css?v=20261102-responder">
-<script src="/bank.js?v=20261102-responder" defer></script>
+<link rel="stylesheet" href="/styles.css?v=20261102-global"><link rel="stylesheet" href="/bank.css?v=20261102-compacto">
+<script src="/bank.js?v=20261102-compacto" defer></script>
 <script src="/math-support.js" defer></script>
-<link rel="stylesheet" href="/navigation.css"><script src="/navigation.js" defer></script><script src="/presence.js" defer></script><link rel="stylesheet" href="/searchable-select.css"><script src="/searchable-select.js" defer></script><script src="/page-motion.js" defer></script><link rel="stylesheet" href="/date-picker.css"><script src="/date-picker.js" defer></script></head>
+<link rel="stylesheet" href="/navigation.css"><script src="/navigation.js" defer></script><script src="/presence.js" defer></script><link rel="stylesheet" href="/searchable-select.css?v=20261102-global"><script src="/searchable-select.js?v=20261102-global" defer></script><script src="/page-motion.js" defer></script><link rel="stylesheet" href="/date-picker.css"><script src="/date-picker.js" defer></script></head>
 <body>
 <button id="mobileMenu" class="mobile-menu" type="button" aria-label="Abrir navegação" aria-controls="sideNav" aria-expanded="false"><span class="hamburger-lines"></span></button>
 <nav id="sideNav" class="side-nav" aria-label="Navegação principal">
@@ -42,8 +42,8 @@
         <div class="bank-filter-field"><label for="filterTopic">Tópico / Assunto</label><select id="filterTopic" multiple data-bank-multi="Assuntos" disabled><option value="">Todos os tópicos</option></select></div>
         <div class="bank-filter-field"><label for="filterBoard">Banca</label><select id="filterBoard" multiple data-bank-multi="Bancas"><option value="">Todas as bancas</option></select></div>
         <div class="bank-filter-field"><label for="filterYear">Ano</label><select id="filterYear" multiple data-bank-multi="Anos"><option value="">Todos os anos</option></select></div>
-        <div class="bank-filter-field"><label for="filterStatus">Situação</label><select id="filterStatus"><option value="">Todas as questões</option><option value="unanswered">Não resolvidas</option><option value="answered">Já resolvidas</option></select></div>
-        <div class="bank-filter-field"><label for="filterType">Tipo de questão</label><select id="filterType"><option value="">Todos os tipos</option><option value="true_false">Certo ou errado</option><option value="multiple_choice">Múltipla escolha</option></select></div>
+        <div class="bank-filter-field"><label for="filterStatus">Situação</label><select id="filterStatus" data-searchable="Pesquisar opções"><option value="">Todas as questões</option><option value="unanswered">Não resolvidas</option><option value="answered">Já resolvidas</option></select></div>
+        <div class="bank-filter-field"><label for="filterType">Tipo de questão</label><select id="filterType" data-searchable="Pesquisar opções"><option value="">Todos os tipos</option><option value="true_false">Certo ou errado</option><option value="multiple_choice">Múltipla escolha</option></select></div>
 </div><div class="bank-filter-options">
         <label class="rights-line"><input id="filterExcludeOutdated" type="checkbox"><span>Remover desatualizadas</span></label><label class="rights-line"><input id="filterOnlyOriginal" type="checkbox"><span>Somente inéditas</span></label>
 </div><div class="bank-filter-actions">
@@ -70,9 +70,9 @@
    <section id="statsPane" class="hidden panel bank-admin">
      <div class="admin-heading"><div><div class="eyebrow">MEU DESEMPENHO</div><h2>Estatísticas de estudo</h2><p>Resultados individuais das questões resolvidas, por disciplina. Consideramos a resposta mais recente em cada questão.</p></div><button id="statsBack" class="btn btn-soft" type="button">← Voltar às questões</button></div>
      <form id="statsFilters" class="stats-filters">
-       <div><label for="statsSubject">Matéria</label><select id="statsSubject"><option value="">Todas as matérias</option></select></div>
-       <div><label for="statsTopic">Tópico</label><select id="statsTopic"><option value="">Todos os tópicos</option></select></div>
-       <div><label for="statsBoard">Banca</label><select id="statsBoard"><option value="">Todas as bancas</option></select></div>
+       <div><label for="statsSubject">Matéria</label><select id="statsSubject" data-searchable="Pesquisar opções"><option value="">Todas as matérias</option></select></div>
+       <div><label for="statsTopic">Tópico</label><select id="statsTopic" data-searchable="Pesquisar opções"><option value="">Todos os tópicos</option></select></div>
+       <div><label for="statsBoard">Banca</label><select id="statsBoard" data-searchable="Pesquisar opções"><option value="">Todas as bancas</option></select></div>
        <div><label for="statsStart">Respondidas a partir de</label><input id="statsStart" type="date"></div>
        <div><label for="statsEnd">Respondidas até</label><input id="statsEnd" type="date"></div>
        <div class="stats-filter-actions"><button id="statsApply" class="btn btn-primary" type="submit">Aplicar filtros</button><button id="statsClear" class="btn btn-soft" type="button">Limpar</button></div>
@@ -100,17 +100,17 @@
       </div>
         <div class="panel admin-box" style="margin-top:18px"><h3>Renomear tópico</h3>
           <p class="bank-note">Atualize o tópico de todas as questões selecionadas, incluindo rascunhos. Para reunir vários tópicos, renomeie cada um com o mesmo nome. As respostas dos alunos serão preservadas.</p>
-          <label for="renameSubject">Disciplina</label><select id="renameSubject"><option value="">Selecione uma disciplina</option></select>
-          <label for="renameTopic">Tópico atual</label><select id="renameTopic"><option value="">Selecione um tópico</option></select>
+          <label for="renameSubject">Disciplina</label><select id="renameSubject" data-searchable="Pesquisar opções"><option value="">Selecione uma disciplina</option></select>
+          <label for="renameTopic">Tópico atual</label><select id="renameTopic" data-searchable="Pesquisar opções"><option value="">Selecione um tópico</option></select>
           <label for="renameTopicName">Novo nome</label><input id="renameTopicName" maxlength="180" placeholder="Ex.: Uso do Hífen">
           <button id="renameTopicButton" class="btn btn-primary" type="button">Renomear tópico</button>
           <p id="renameTopicStatus" class="bank-note" role="status"></p>
         </div>
         <div class="panel admin-box" style="margin-top:18px"><h3>Exclusão de questões</h3>
           <p class="bank-note">Exclusivo do administrador. A exclusão é irreversível e remove também as respostas vinculadas. Faça backup antes.</p>
-          <label for="deleteMode">Modo</label><select id="deleteMode"><option value="last">Última importação — somente questões novas do lote</option><option value="filters">Por disciplina e tópico</option></select>
-          <label for="deleteSubject">Disciplina (modo filtros)</label><select id="deleteSubject"><option value="">Selecione</option></select>
-          <label for="deleteTopic">Tópico</label><select id="deleteTopic"><option value="">Todos os tópicos</option></select>
+          <label for="deleteMode">Modo</label><select id="deleteMode" data-searchable="Pesquisar opções"><option value="last">Última importação — somente questões novas do lote</option><option value="filters">Por disciplina e tópico</option></select>
+          <label for="deleteSubject">Disciplina (modo filtros)</label><select id="deleteSubject" data-searchable="Pesquisar opções"><option value="">Selecione</option></select>
+          <label for="deleteTopic">Tópico</label><select id="deleteTopic" data-searchable="Pesquisar opções"><option value="">Todos os tópicos</option></select>
           <p id="deleteCount" class="bank-note">Confira a quantidade antes de excluir.</p>
           <button id="deletePreview" class="btn btn-soft" type="button">Conferir quantidade</button>
           <button id="deleteGroup" class="btn btn-outline" type="button">Excluir seleção…</button>
@@ -122,10 +122,10 @@
  <form id="editorForm"><div class="modal-title"><h2>Editar e conferir questão</h2><button id="closeEditor" type="button" class="btn btn-ghost">Fechar ✕</button></div>
   <p class="bank-note">Revise o gabarito e o comentário antes de publicar.</p>
   <div class="editor-pair"><div><label for="editSubject">Disciplina</label><input id="editSubject" required></div><div><label for="editTopic">Assunto</label><input id="editTopic" required></div></div>
-  <div class="editor-pair"><div><label for="editBoard">Banca</label><input id="editBoard"></div><div><label for="editYear">Ano</label><input id="editYear" type="number" min="1900" max="2100"></div></div>
+  <div><label for="editJob">Cargo</label><input id="editJob" placeholder="Ex.: Soldado, Agente, Escrivão"></div><div class="editor-pair"><div><label for="editBoard">Banca</label><input id="editBoard"></div><div><label for="editYear">Ano</label><input id="editYear" type="number" min="1900" max="2100"></div></div>
   <label for="editStatement">Enunciado</label><textarea id="editStatement" rows="6" required></textarea>
   <label for="editAlternatives">Alternativas: uma por linha (A) texto)</label><textarea id="editAlternatives" rows="5" required></textarea>
-  <label for="editCorrect">Gabarito</label><select id="editCorrect"><option value="">Ainda não verificado (rascunho)</option></select>
+  <label for="editCorrect">Gabarito</label><select id="editCorrect" data-searchable="Pesquisar opções"><option value="">Ainda não verificado (rascunho)</option></select>
   <label for="editCommentary">Comentário explicativo — aceita Markdown: **negrito**, ==grifo==, ## título</label><textarea id="editCommentary" rows="7" placeholder="Explique por que a alternativa correta é correta e as demais não são..."></textarea>
   <p class="bank-note">Formatação: <code>**negrito**</code> • <code>==grifo==</code> • <code>## Título</code> • <code>__sublinhado__</code>. O texto é exibido com segurança, sem executar HTML.</p>
   <label class="rights-line"><input type="checkbox" id="editOriginal"><span>Questão inédita (classificação do conteúdo, não do histórico do usuário)</span></label><label class="rights-line"><input type="checkbox" id="editOutdated"><span>Questão desatualizada</span></label>

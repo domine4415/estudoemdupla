@@ -31,7 +31,7 @@ function normalize(q){
     commentary:trimmed(q.commentary||q.explanation||q.comentario,12000),
     subject:trimmed(q.subject??q.metadata?.subject,180)||'Não classificada',
     topic:normalizeTopic(trimmed(q.topic||q.assunto||q.metadata?.topic,180))||'Geral',
-    board:trimmed(q.board??q.metadata?.board,120),exam:trimmed(q.exam??q.metadata?.contest,250),
+    job:trimmed(q.job??q.cargo??q.role??q.metadata?.job??q.metadata?.cargo,180),board:trimmed(q.board??q.metadata?.board,120),exam:trimmed(q.exam??q.metadata?.contest,250),
     year:Number.isInteger(year)&&year>=1900&&year<=2100?String(year):'',
     originalId,link:trimmed(q.link??q.sourceUrl,600)
   };
@@ -50,7 +50,7 @@ function publicQuestion(row,attempt){
   const q=row.data||{};
   const answered=Boolean(attempt);
   return {id:row.id,subject:row.subject,topic:normalizeTopic(row.topic),board:row.board,year:row.exam_year,
-    exam:q.exam||'',originalId:q.originalId||'',link:q.link||'',
+    job:q.job||q.cargo||q.role||'',exam:q.exam||'',originalId:q.originalId||'',link:q.link||'',
     statement:q.statement||row.statement,alternatives:q.alternatives||[],type:q.type||'multiple_choice',
     lastAttempt:attempt?{choice:attempt.choice,isCorrect:attempt.is_correct,at:attempt.answered_at}:null,
     correct:answered?q.correct:null,
@@ -124,7 +124,7 @@ module.exports=function createBankApi({databaseRequest,parseJson,send,err,isAdmi
       const attemptRows=visible.length?await json('dupla_bank_attempts?'+new URLSearchParams({select:'question_id,choice,is_correct,answered_at,id',user_id:'eq.'+user.id,question_id:'in.('+visible.map(r=>r.id).join(',')+')',order:'answered_at.desc,id.desc',limit:'10000'})):[];
       const latest=new Map();for(const a of attemptRows)if(!latest.has(a.question_id))latest.set(a.question_id,a);
       return send(res,200,{items:visible.map(x=>({id:x.id,subject:x.subject,topic:normalizeTopic(x.topic),board:x.board,
-        year:x.exam_year,type:x.data?.type||'multiple_choice',preview:x.statement.slice(0,250),hasKey:x.has_key,hasCommentary:x.has_commentary, lastAttempt:latest.get(x.id)?{choice:latest.get(x.id).choice,isCorrect:latest.get(x.id).is_correct}:null,alternatives:x.data?.alternatives||[],statement:x.data?.statement||x.statement,exam:x.data?.exam||''})),page,hasMore:rows.length>MAX_PAGE});
+        year:x.exam_year,type:x.data?.type||'multiple_choice',preview:x.statement.slice(0,250),hasKey:x.has_key,hasCommentary:x.has_commentary, lastAttempt:latest.get(x.id)?{choice:latest.get(x.id).choice,isCorrect:latest.get(x.id).is_correct}:null,alternatives:x.data?.alternatives||[],statement:x.data?.statement||x.statement,job:x.data?.job||x.data?.cargo||x.data?.role||'',exam:x.data?.exam||''})),page,hasMore:rows.length>MAX_PAGE});
     }
     if(op==='question'&&parts.length===2&&req.method==='GET'){
       const row=await questionById(parts[1]);

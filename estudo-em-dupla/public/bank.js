@@ -58,11 +58,15 @@ function syncBankMulti(id){
  const select=$(id);if(!select.multiple)return;
  let box=document.getElementById(id+'Choices');
  if(!box){box=document.createElement('div');box.id=id+'Choices';box.className='bank-multi';select.hidden=true;select.after(box);}
- box.replaceChildren();const search=document.createElement('input');search.type='search';search.placeholder='Pesquisar opções';search.setAttribute('aria-label','Pesquisar '+select.dataset.bankMulti);search.disabled=select.disabled;box.append(search);
- const hint=document.createElement('small');hint.textContent=select.disabled?'Escolha uma disciplina primeiro':'Nenhuma marcada = todas';box.append(hint);
- const list=document.createElement('div');list.className='bank-multi-list';box.append(list);
- for(const option of select.options){if(!option.value)continue;const label=document.createElement('label'),check=document.createElement('input');check.type='checkbox';check.checked=option.selected;check.disabled=select.disabled;check.onchange=()=>{option.selected=check.checked;select.dispatchEvent(new Event('change',{bubbles:true}));};label.append(check,document.createTextNode(option.textContent));list.append(label);}
+ box.replaceChildren();const trigger=document.createElement('button');trigger.type='button';trigger.className='bank-multi-trigger';trigger.disabled=select.disabled;trigger.setAttribute('aria-expanded','false');
+ const update=()=>{const count=bankFilterValues(id).length;trigger.textContent=select.disabled?'Escolha a disciplina':count?count+' selecionado'+(count===1?'':'s'):'Pesquisar '+select.dataset.bankMulti.toLowerCase();};update();box.append(trigger);
+ const menu=document.createElement('div');menu.className='bank-multi-menu';menu.hidden=true;box.append(menu);
+ const search=document.createElement('input');search.type='search';search.placeholder='Digite para pesquisar';search.setAttribute('aria-label','Pesquisar '+select.dataset.bankMulti);menu.append(search);
+ trigger.onclick=()=>{const open=menu.hidden;for(const other of document.querySelectorAll('.bank-multi-menu'))other.hidden=true;menu.hidden=!open;trigger.setAttribute('aria-expanded',String(open));if(open)search.focus();};
+ const list=document.createElement('div');list.className='bank-multi-list';menu.append(list);
+ for(const option of select.options){if(!option.value)continue;const label=document.createElement('label'),check=document.createElement('input');check.type='checkbox';check.checked=option.selected;check.onchange=()=>{option.selected=check.checked;update();select.dispatchEvent(new Event('change',{bubbles:true}));};const text=document.createElement('span');text.textContent=option.textContent;label.append(check,text);list.append(label);}
  search.oninput=()=>{const normalize=v=>v.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();for(const label of list.children)label.hidden=!normalize(label.textContent).includes(normalize(search.value));};
+
 }
 function fillDropdown(id,values,prompt){const select=$(id),old=bankFilterValues(id);select.replaceChildren();if(!select.multiple)addOption(select,'',prompt);for(const v of values||[])addOption(select,String(v),String(v));for(const option of select.options)option.selected=old.includes(option.value);syncBankMulti(id);}
 function fillTopics(){const subjects=bankFilterValues('filterSubject'),topic=$('filterTopic');topic.disabled=!subjects.length;const topics=[...new Set((filters.pairs||[]).filter(p=>subjects.includes(p.subject)).map(p=>p.topic))].sort((a,b)=>a.localeCompare(b,'pt-BR'));fillDropdown('filterTopic',topics,'Todos os tópicos');}
@@ -105,7 +109,7 @@ function bankAnswerConfirmation(list,submit){
 function renderInlineQuestion(r){
  const card=elt('article','inline-question');card.dataset.questionId=r.id;
  const header=elt('div','inline-header');header.append(elt('span','eyebrow',`${r.subject} / ${r.topic}`),elt('span','pill',r.type==='true_false'?'CERTO OU ERRADO':'MÚLTIPLA ESCOLHA'));
- card.append(header,elt('div','question-meta',[r.board,r.exam,r.year].filter(Boolean).join(' • ')),elt('div','statement',r.statement||r.preview));
+ card.append(header,elt('div','question-meta',[r.job?'Cargo: '+r.job:r.exam,r.board?'Banca: '+r.board:'',r.year?'Ano: '+r.year:''].filter(Boolean).join(' • ')),elt('div','statement',r.statement||r.preview));
  const banner=elt('div','past-answer');card.append(banner);
  const opts=elt('div','answer-options');card.append(opts);
  const feedback=elt('div','bank-feedback hidden');card.append(feedback);
@@ -172,7 +176,7 @@ function renderCurrent(){
   $('questionEmpty').classList.add('hidden');$('questionContent').classList.remove('hidden');
   $('questionLabel').textContent=[q.subject,q.topic].filter(Boolean).join(' / ');
   $('questionBadge').textContent=q.type==='true_false'?'CERTO OU ERRADO':'MÚLTIPLA ESCOLHA';
-  $('questionMetadata').textContent=[q.board,q.exam,q.year].filter(Boolean).join(' • ');
+  $('questionMetadata').textContent=[q.job?'Cargo: '+q.job:q.exam,q.board?'Banca: '+q.board:'',q.year?'Ano: '+q.year:''].filter(Boolean).join(' • ');
   $('bankStatement').textContent=q.statement;
   const list=$('bankOptions');list.replaceChildren();$('bankFeedback').classList.add('hidden');$('repeatQuestion').classList.add('hidden');
   $('adminEditCurrent').classList.toggle('hidden',!admin);
@@ -222,7 +226,7 @@ function parseRecord(raw,index){
   if(topic==='Geral'&&$('topicOverride').value.trim())topic=$('topicOverride').value.trim();
   return {id:String(raw.id||index+1),statement:clean(extra.statement||raw.statement),alternatives,type,
     correct,commentary:clean(raw.commentary||raw.explanation||raw.comentario||raw.justification),
-    subject,topic,isOriginal:raw.isOriginal===true||raw.inedita===true,isOutdated:raw.isOutdated===true||raw.desatualizada===true,board:clean(extra.board||raw.board),exam:clean(extra.exam||raw.exam),
+    subject,topic,isOriginal:raw.isOriginal===true||raw.inedita===true,isOutdated:raw.isOutdated===true||raw.desatualizada===true,job:clean(raw.job||raw.cargo||raw.role||extra.job||extra.cargo),board:clean(extra.board||raw.board),exam:clean(extra.exam||raw.exam),
     year:clean(extra.year||raw.year),originalId:clean(extra.originalId||raw.originalId||(String(raw.statementHtml||'').match(/tecconcursos\.com\.br\/questoes\/(\d{4,20})/)||[])[1]||(/^\d{4,20}$/.test(String(raw.id||''))?raw.id:'')),link:clean(extra.link||raw.link)};
 }
 function extractRecords(data){const items=Array.isArray(data)?data:(Array.isArray(data.questions)?data.questions:(data.statement?[data]:null));
@@ -285,7 +289,7 @@ function refreshKeyOptions(){const lines=$('editAlternatives').value.split(/\r?\
 }
 function createOriginal(){
   editingId=null;editingRecord={type:'multiple_choice',exam:'',originalId:'',link:''};
-  $('editSubject').value='';$('editTopic').value='';$('editBoard').value='';$('editYear').value='';
+  $('editSubject').value='';$('editTopic').value='';$('editJob').value='';$('editBoard').value='';$('editYear').value='';
   $('editStatement').value='';$('editAlternatives').value='A) \nB) ';
   $('editCommentary').value='';refreshKeyOptions();$('editCorrect').value='';
   $('editOriginal').checked=false;$('editOutdated').checked=false;$('editPublished').checked=true;$('deleteQuestion').classList.add('hidden');
@@ -296,7 +300,7 @@ async function editItem(id){
     const result=await api('bank/admin/item/'+id);
     editingId=result.id;const q=result.data;editingRecord=q;$('deleteQuestion').classList.remove('hidden');
     $('editSubject').value=q.subject||'';$('editTopic').value=q.topic||'';
-    $('editBoard').value=q.board||'';$('editYear').value=q.year||'';
+    $('editJob').value=q.job||'';$('editBoard').value=q.board||'';$('editYear').value=q.year||'';
     $('editStatement').value=q.statement||'';
     $('editAlternatives').value=(q.alternatives||[]).map(a=>`${a.letter}) ${a.text}`).join('\n');
     $('editCommentary').value=q.commentary||'';
@@ -307,7 +311,7 @@ async function editItem(id){
 }
 async function saveEdit(e){e.preventDefault();
   const q={...editingRecord,id:editingId,isOriginal:$('editOriginal').checked,isOutdated:$('editOutdated').checked,subject:$('editSubject').value,topic:$('editTopic').value,
-    board:$('editBoard').value,year:$('editYear').value,statement:$('editStatement').value,
+    job:$('editJob').value,board:$('editBoard').value,year:$('editYear').value,statement:$('editStatement').value,
     alternatives:$('editAlternatives').value.split(/\r?\n/).map((line,i)=>{
       const m=line.trim().match(/^([A-H])\s*[).:\-]\s*(.+)$/i);return{letter:m?m[1].toUpperCase():String.fromCharCode(65+i),text:m?m[2]:line.trim()};
     }).filter(a=>a.text.trim()),correct:$('editCorrect').value,commentary:$('editCommentary').value};
@@ -432,3 +436,6 @@ async function boot(){
   if(location.hash==="#estatisticas")showStats();
 }
 boot();
+
+document.addEventListener('click',event=>{for(const box of document.querySelectorAll('.bank-multi'))if(!box.contains(event.target)){box.querySelector('.bank-multi-menu').hidden=true;box.querySelector('button').setAttribute('aria-expanded','false');}});
+document.addEventListener('keydown',event=>{if(event.key==='Escape')for(const box of document.querySelectorAll('.bank-multi')){box.querySelector('.bank-multi-menu').hidden=true;box.querySelector('button').setAttribute('aria-expanded','false');}});
