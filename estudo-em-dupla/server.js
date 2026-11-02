@@ -356,7 +356,7 @@ const mime={'.html':'text/html; charset=utf-8','.css':'text/css; charset=utf-8',
 Object.assign(files,{'/teoria':'theory.html','/theory.js':'theory.js','/theory.css':'theory.css'});
 files['/theory-highlights.js']='theory-highlights.js';
 files['/navigation.js']='navigation.js';files['/navigation.css']='navigation.css';
-files['/room-voice.js']='room-voice.js';files['/room-screen.js']='room-screen.js';
+files['/room-voice.js']='room-voice.js';files['/room-screen.js']='room-screen.js';files['/room-navigation.js']='room-navigation.js';
 files['/searchable-select.js']='searchable-select.js';files['/searchable-select.css']='searchable-select.css';
 files['/room-chat.js']='room-chat.js';files['/room-chat.css']='room-chat.css';
 Object.assign(files,{'/comunidade':'community.html','/community.js':'community.js','/community.css':'community.css','/presence.js':'presence.js'});
