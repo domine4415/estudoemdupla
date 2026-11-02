@@ -156,8 +156,16 @@ module.exports=function createBankApi({databaseRequest,parseJson,send,err,isAdmi
         const result=[];params.set('limit','1000');
         for(let offset=0;;offset+=1000){params.set('offset',String(offset));const batch=await json(table+'?'+params);result.push(...batch);if(batch.length<1000)return result;}
       }
-      const rp=new URLSearchParams({select:'room_code,question_key,is_correct,answered_at,subject,topic,board',user_id:'eq.'+user.id,order:'answered_at.desc,room_code,question_key'});for(const value of ap.getAll('answered_at'))rp.append('answered_at',value);
-      const [questions,history,roomHistory]=await Promise.all([allRows('dupla_bank_questions',qp),allRows('dupla_bank_attempts',ap),allRows('policial_room_answers',rp)]);
+      // SELECT * mantém compatibilidade com históricos anteriores às novas colunas.
+      const rp=new URLSearchParams({select:'*',user_id:'eq.'+user.id,order:'answered_at.desc,room_code,question_key'});for(const value of ap.getAll('answered_at'))rp.append('answered_at',value);
+      const warnings=[];
+      const roomRows=allRows('policial_room_answers',rp).catch(error=>{
+        if(['42P01','PGRST205'].includes(error.databaseCode)){
+          warnings.push('As respostas das salas ainda não puderam ser incluídas. Execute COMUNIDADE_SQL.sql atualizado no Supabase e tente novamente.');return [];
+        }
+        throw Object.assign(new Error('Não foi possível consultar as respostas das salas. Confira a conexão e execute COMUNIDADE_SQL.sql atualizado no Supabase.'),{status:503});
+      });
+      const [questions,history,roomHistory]=await Promise.all([allRows('dupla_bank_questions',qp),allRows('dupla_bank_attempts',ap),roomRows]);
       const ids=new Set(questions.map(q=>q.id));
       const attempts=history.filter(a=>ids.has(a.question_id));
       const latest=new Map();for(const a of attempts)if(!latest.has(a.question_id))latest.set(a.question_id,a);
@@ -172,7 +180,7 @@ module.exports=function createBankApi({databaseRequest,parseJson,send,err,isAdmi
         if(selectedSubject&&meta.subject!==selectedSubject||selectedTopic&&normalizeTopic(meta.topic)!==normalizeTopic(selectedTopic)||selectedBoard&&meta.board!==selectedBoard)continue;
         const subject=meta.subject||'Não classificada';let group=groups.get(subject);if(!group){group={subject,total:0,answered:0,correct:0,wrong:0};groups.set(subject,group);}group.answered++;group.total++;if(answer.is_correct)group.correct++;else group.wrong++;roomCount++;
       }
-      return send(res,200,{total:questions.length,answered:[...groups.values()].reduce((n,g)=>n+g.answered,0),correct:[...groups.values()].reduce((n,g)=>n+g.correct,0),wrong:[...groups.values()].reduce((n,g)=>n+g.wrong,0),attempts:attempts.length+roomCount,roomAnswered:roomCount,subjects:[...groups.values()].sort((a,b)=>a.subject.localeCompare(b.subject,'pt-BR'))});
+      return send(res,200,{warnings,total:questions.length,answered:[...groups.values()].reduce((n,g)=>n+g.answered,0),correct:[...groups.values()].reduce((n,g)=>n+g.correct,0),wrong:[...groups.values()].reduce((n,g)=>n+g.wrong,0),attempts:attempts.length+roomCount,roomAnswered:roomCount,subjects:[...groups.values()].sort((a,b)=>a.subject.localeCompare(b.subject,'pt-BR'))});
     }
     if(op!=='admin')return err(res,404,'Rota do banco não encontrada.');
     if(!isAdmin(user))return err(res,403,'Somente o administrador pode gerenciar questões.');

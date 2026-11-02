@@ -55,7 +55,7 @@ function showAdmin(open){$('statsPane').classList.add('hidden');$('studyPane').c
 async function loadFacets(){try{filters=await api('bank/facets');fillDropdown('filterSubject',filters.subjects,'Todas as disciplinas');fillDropdown('filterBoard',filters.boards,'Todas as bancas');fillDropdown('filterYear',filters.years.map(String),'Todos os anos');fillTopics();}catch(e){notify('Filtros indisponíveis: '+e.message,true);}}
 function fillDropdown(id,values,prompt){const select=$(id),old=select.value;select.replaceChildren();addOption(select,'',prompt);for(const v of values||[])addOption(select,String(v),String(v));if([...select.options].some(o=>o.value===old))select.value=old;}
 function fillTopics(){const subject=$('filterSubject').value;const topic=$('filterTopic');topic.disabled=!subject;if(!subject){topic.replaceChildren(new Option('Escolha uma disciplina primeiro',''));return;}const topics=[...new Set((filters.pairs||[]).filter(p=>p.subject===subject).map(p=>p.topic))].sort((a,b)=>a.localeCompare(b,'pt-BR'));fillDropdown('filterTopic',topics,'Todos os tópicos');}
-async function loadProgress(){try{const p=await api('bank/progress');$('statAnswered').textContent=p.answered??0;$('statCorrect').textContent=p.correct??0;$('statWrong').textContent=p.wrong??0;}catch(e){notify('Não foi possível recuperar seu desempenho: '+e.message,true);}}
+async function loadProgress(){try{const p=await api('bank/progress');$('statAnswered').textContent=p.answered??0;$('statCorrect').textContent=p.correct??0;$('statWrong').textContent=p.wrong??0;if(p.warnings?.length)notify(p.warnings.join(' '),true);}catch(e){notify('Não foi possível recuperar seu desempenho: '+e.message,true);}}
 let filterGeneration=0, responseCache=new Map(), requestGeneration=0;
 function renderCommentary(value){
   const root=elt('div','commentary rich-comment');
@@ -113,17 +113,18 @@ async function loadList(){
   const q=new URLSearchParams({page:String(page)});
   for(const [key,id] of [['subject','filterSubject'],['topic','filterTopic'],['board','filterBoard'],['year','filterYear'],['search','filterSearch'],['status','filterStatus'],['type','filterType']]){const value=$(id).value.trim();if(value)q.set(key,value);}
   if($('filterExcludeOutdated').checked)q.set('excludeOutdated','true');if($('filterOnlyOriginal').checked)q.set('onlyOriginal','true');
-  $('listMessage').textContent='Carregando questões...';$('questionCards').replaceChildren();
+  $('listMessage').textContent='Carregando questões...';$('questionCards').setAttribute('aria-busy','true');
   try{
     const data=await api('bank/questions?'+q);if(token!==requestGeneration)return;
     hasMore=data.hasMore;$('pageDisplay').textContent='Página '+page;
     $('previousPage').disabled=page<=1;$('nextPage').disabled=!hasMore;
-    const list=$('questionCards');
+    const list=$('questionCards'),fragment=document.createDocumentFragment();
     for(const [index,r] of data.items.entries()){
-      const item=renderInlineQuestion(r);const number=elt('div','question-number',`Questão ${(page-1)*10+index+1}`);item.prepend(number);list.append(item);
+      const item=renderInlineQuestion(r);const number=elt('div','question-number',`Questão ${(page-1)*10+index+1}`);item.prepend(number);fragment.append(item);
     }
+    list.replaceChildren(fragment);
     $('listMessage').textContent=data.items.length?'':'Nenhuma questão disponível com esses filtros.';
-  }catch(e){if(token!==requestGeneration)return;$('listMessage').textContent='Não foi possível carregar. '+e.message;notify(e.message,true);}
+  }catch(e){if(token!==requestGeneration)return;$('listMessage').textContent='Não foi possível carregar. '+e.message;notify(e.message,true);}finally{if(token===requestGeneration)$('questionCards').setAttribute('aria-busy','false');}
 }
 function applyFreshFilter(){filterGeneration++;page=1;loadList();}
 async function openQuestion(id){
@@ -365,9 +366,9 @@ async function showStats(){
   const params=new URLSearchParams();
   for(const [key,id] of [['subject','statsSubject'],['topic','statsTopic'],['board','statsBoard'],['start','statsStart'],['end','statsEnd']])if($(id).value)params.set(key,$(id).value);
   if($('statsStart').value&&$('statsEnd').value&&$('statsStart').value>$('statsEnd').value){notify('A data inicial deve ser anterior ou igual à final.',true);return;}
-  $('statsSummary').textContent='Carregando...';$('statsSubjects').replaceChildren();
+  $('statsWarning').textContent='';$('statsSummary').textContent='Carregando...';$('statsSubjects').replaceChildren();
   try{const d=await api('bank/statistics?'+params);if(generation!==statsGeneration)return;const pct=d.answered?Math.round(d.correct/d.answered*100):0;
-    $('statsSummary').replaceChildren();
+    $('statsWarning').textContent=(d.warnings||[]).join(' ');$('statsSummary').replaceChildren();
     for(const [label,value] of [['Questões respondidas',d.answered],['Acertos',d.correct],['Erros',d.wrong],['Taxa de acertos',pct+'%'],['Tentativas realizadas',d.attempts]]){
       const card=elt('div','bank-stat');card.append(elt('strong','',String(value)),elt('span','',label));$('statsSummary').append(card);
     }
@@ -388,7 +389,7 @@ async function boot(){
   $('statsClear').onclick=()=>{$('statsFilters').reset();fillStatsTopics();showStats();};
   $('mobileMenu').onclick=()=>{const open=$('sideNav').classList.toggle('open');$('menuShade').hidden=!open;$('mobileMenu').setAttribute('aria-expanded',String(open));};
   $('menuShade').onclick=()=>{$('sideNav').classList.remove('open');$('menuShade').hidden=true;$('mobileMenu').setAttribute('aria-expanded','false');};$('statsBack').onclick=()=>{$('statsPane').classList.add('hidden');$('studyPane').classList.remove('hidden');loadList();};
-  $('filterExcludeOutdated').onchange=applyFreshFilter;$('filterOnlyOriginal').onchange=applyFreshFilter;$('applyFilter').onclick=applyFreshFilter;$('filterSearch').onkeydown=e=>{if(e.key==='Enter')applyFreshFilter();};
+  $('filterExcludeOutdated').onchange=applyFreshFilter;$('filterOnlyOriginal').onchange=applyFreshFilter;$('applyFilter').onclick=()=>{applyFreshFilter();$('bankFilters').open=false;};$('filterSearch').onkeydown=e=>{if(e.key==='Enter')applyFreshFilter();};
   $('filterSubject').onchange=()=>{$('filterTopic').value='';fillTopics();applyFreshFilter();};
   for(const id of ['filterTopic','filterBoard','filterYear','filterStatus','filterType'])$(id).onchange=applyFreshFilter;
   $('clearFilter').onclick=()=>{$('filterExcludeOutdated').checked=false;$('filterOnlyOriginal').checked=false;for(const id of ['filterSearch','filterSubject','filterTopic','filterBoard','filterYear','filterStatus','filterType'])$(id).value='';fillTopics();applyFreshFilter();};

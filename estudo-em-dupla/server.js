@@ -38,9 +38,11 @@ function databaseRequest(endpoint, init={}) {
     signal: AbortSignal.timeout(12000)
   }).then(async response => {
     if (!response.ok) {
-      const detail = (await response.text()).slice(0,400);
+      const raw = await response.text();
+      const detail = raw.slice(0,400);let databaseCode='';
+      try{databaseCode=JSON.parse(raw).code||'';}catch{}
       console.error('Supabase status',response.status, detail);
-      throw new Error('O banco Supabase não respondeu corretamente (HTTP '+response.status+'). Confira as tabelas do Supabase (BANCO_SQL.sql para o banco) e as variáveis do Render.');
+      throw Object.assign(new Error('O banco Supabase não respondeu corretamente (HTTP '+response.status+'). Confira os scripts SQL e as variáveis do Render.'),{status:502,databaseCode,databaseStatus:response.status});
     }
     return response;
   });
@@ -348,6 +350,7 @@ setInterval(()=>roomsApi.sweep().catch(e=>console.error('Falha ao encerrar salas
 const bankApi=createBankApi({databaseRequest,parseJson,send,err,isAdmin,storageEnabled});
 const theoryApi=createTheoryApi({databaseRequest,parseJson,send,err,isAdmin,storageEnabled});
 const files={'/banco':'bank.html','/banco.html':'bank.html','/bank.js':'bank.js','/bank.css':'bank.css','/':'index.html','/index.html':'index.html','/app.js':'app.js','/styles.css':'styles.css'};
+files['/math-support.js']='math-support.js';files['/page-motion.js']='page-motion.js';
 const mime={'.html':'text/html; charset=utf-8','.css':'text/css; charset=utf-8','.js':'application/javascript; charset=utf-8'};
 Object.assign(files,{'/teoria':'theory.html','/theory.js':'theory.js','/theory.css':'theory.css'});
 files['/theory-highlights.js']='theory-highlights.js';

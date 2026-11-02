@@ -194,3 +194,8 @@ O dono pode combinar disciplina e assunto com banca, ano, tipo (certo/errado ou 
 As marcações de inédita e desatualizada são editoriais: ficam no editor administrativo da questão e também podem vir do JSON pelos campos booleanos isOriginal/inedita e isOutdated/desatualizada. “Somente inéditas” não significa “ainda não resolvidas”: só inclui questões explicitamente classificadas. “Remover desatualizadas” exclui as marcadas como tal. Questões antigas sem marcação de inédita ficam fora desse filtro. As duas opções também estão nos filtros do banco individual.
 
 A seleção procura questões elegíveis além da primeira página do banco até preencher o limite ou esgotar os resultados; o conjunto selecionado continua sendo embaralhado. Publique rooms-api.js, o novo room-bank-filter.js, bank-api.js e a pasta public atualizada. Não exige SQL novo, pois as classificações usam o JSON já armazenado nas questões e o histórico existente.
+
+
+### Troca de resposta antes da revelação
+
+O participante pode trocar a alternativa escolhida enquanto a questão não foi revelada. Quando todos respondem ou o dono revela as escolhas, a resposta fica definitiva. Acertos, erros, estatísticas e troféus usam a última escolha registrada antes da revelação. Avançar para outra questão, trocar o conjunto ou encerrar a sala também finaliza as respostas existentes. Publique rooms-api.js e public/app.js atualizados; não exige SQL novo.

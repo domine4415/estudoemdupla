@@ -7,7 +7,7 @@
 <link rel="stylesheet" href="/styles.css"><link rel="stylesheet" href="/bank.css">
 <script src="/bank.js" defer></script>
 <script src="/math-support.js" defer></script>
-<link rel="stylesheet" href="/navigation.css"><script src="/navigation.js" defer></script><script src="/presence.js" defer></script><link rel="stylesheet" href="/searchable-select.css"><script src="/searchable-select.js" defer></script></head>
+<link rel="stylesheet" href="/navigation.css"><script src="/navigation.js" defer></script><script src="/presence.js" defer></script><link rel="stylesheet" href="/searchable-select.css"><script src="/searchable-select.js" defer></script><script src="/page-motion.js" defer></script></head>
 <body>
 <button id="mobileMenu" class="mobile-menu" type="button" aria-label="Abrir navegação" aria-controls="sideNav" aria-expanded="false"><span class="hamburger-lines"></span></button>
 <nav id="sideNav" class="side-nav" aria-label="Navegação principal">
@@ -35,20 +35,23 @@
       <div class="bank-stat"><strong id="statWrong">—</strong><span>Últimas respostas erradas</span></div>
    </div>
    <div id="studyPane" class="bank-layout">
-      <aside class="panel bank-filter">
-        <div class="eyebrow">PERSONALIZAR ESTUDO</div><h2>Filtros</h2>
-        <label for="filterSearch">Buscar no enunciado</label><input id="filterSearch" placeholder="Ex.: abuso de autoridade" maxlength="70">
-        <label for="filterSubject">Disciplina</label><select id="filterSubject" data-searchable="Digite o nome da disciplina"><option value="">Todas as disciplinas</option></select>
-        <label for="filterTopic">Tópico / Assunto</label><select id="filterTopic" data-searchable="Digite o nome do assunto" disabled><option value="">Todos os tópicos</option></select>
-        <label for="filterBoard">Banca</label><select id="filterBoard"><option value="">Todas as bancas</option></select>
-        <label for="filterYear">Ano</label><select id="filterYear"><option value="">Todos os anos</option></select>
-        <label for="filterStatus">Situação</label><select id="filterStatus"><option value="">Todas as questões</option><option value="unanswered">Não resolvidas</option><option value="answered">Já resolvidas</option></select>
-        <label for="filterType">Tipo de questão</label><select id="filterType"><option value="">Todos os tipos</option><option value="true_false">Certo ou errado</option><option value="multiple_choice">Múltipla escolha</option></select>
+      <details id="bankFilters" class="panel bank-filter">
+        <summary class="bank-filter-heading"><span><span class="eyebrow">PERSONALIZAR ESTUDO</span><strong>Filtros de questões</strong></span><span class="filter-open-label">Mostrar filtros</span><span class="filter-close-label">Recolher filtros</span></summary><div class="bank-filter-body"><div class="bank-filter-grid">
+        <div class="bank-filter-field"><label for="filterSearch">Buscar no enunciado</label><input id="filterSearch" placeholder="Ex.: abuso de autoridade" maxlength="70"></div>
+        <div class="bank-filter-field"><label for="filterSubject">Disciplina</label><select id="filterSubject" data-searchable="Digite o nome da disciplina"><option value="">Todas as disciplinas</option></select></div>
+        <div class="bank-filter-field"><label for="filterTopic">Tópico / Assunto</label><select id="filterTopic" data-searchable="Digite o nome do assunto" disabled><option value="">Todos os tópicos</option></select></div>
+        <div class="bank-filter-field"><label for="filterBoard">Banca</label><select id="filterBoard"><option value="">Todas as bancas</option></select></div>
+        <div class="bank-filter-field"><label for="filterYear">Ano</label><select id="filterYear"><option value="">Todos os anos</option></select></div>
+        <div class="bank-filter-field"><label for="filterStatus">Situação</label><select id="filterStatus"><option value="">Todas as questões</option><option value="unanswered">Não resolvidas</option><option value="answered">Já resolvidas</option></select></div>
+        <div class="bank-filter-field"><label for="filterType">Tipo de questão</label><select id="filterType"><option value="">Todos os tipos</option><option value="true_false">Certo ou errado</option><option value="multiple_choice">Múltipla escolha</option></select></div>
+</div><div class="bank-filter-options">
         <label class="rights-line"><input id="filterExcludeOutdated" type="checkbox"><span>Remover desatualizadas</span></label><label class="rights-line"><input id="filterOnlyOriginal" type="checkbox"><span>Somente inéditas</span></label>
+</div><div class="bank-filter-actions">
         <button id="applyFilter" class="btn btn-primary btn-full">Buscar questões →</button>
         <button id="clearFilter" class="btn btn-soft btn-full">Limpar filtros</button>
+</div>
         <p class="filter-note">O gabarito e o comentário aparecem após você responder. Seu histórico fica salvo na sua conta.</p>
-      </aside>
+      </div></details>
       <section class="panel bank-results"><div class="list-head"><div><div class="eyebrow">RESOLVA DIRETAMENTE</div><h2>Questões</h2></div><span id="pageDisplay" class="tiny muted"></span></div>
         <p id="listMessage" class="bank-note">Carregando...</p><div id="questionCards" class="bank-cards"></div>
         <div class="pager"><button id="previousPage" class="btn btn-soft" type="button">← Anterior</button><button id="nextPage" class="btn btn-soft" type="button">Próxima →</button></div>
@@ -75,7 +78,7 @@
        <div class="stats-filter-actions"><button id="statsApply" class="btn btn-primary" type="submit">Aplicar filtros</button><button id="statsClear" class="btn btn-soft" type="button">Limpar</button></div>
      </form>
      <p class="bank-note">O período considera a data das respostas, no horário de Brasília, incluindo o dia final. Inclui o banco individual e as salas. No banco, considera a última resposta por questão no período; nas salas, a primeira resposta de cada questão por sala. O desempenho é a proporção de acertos entre as questões respondidas; matérias sem respostas não entram na lista.</p>
-     <div id="statsSummary" class="bank-stats" role="status"></div><h3>Desempenho por disciplina</h3><div id="statsSubjects" class="stats-subjects"></div>
+     <p id="statsWarning" class="bank-note" role="status"></p><div id="statsSummary" class="bank-stats" role="status"></div><h3>Desempenho por disciplina</h3><div id="statsSubjects" class="stats-subjects"></div>
    </section>
    <section id="adminPane" class="hidden bank-admin panel">
       <div class="admin-heading"><div><div class="eyebrow">EXCLUSIVO DO ADMINISTRADOR</div><h2>Gerenciar banco de questões</h2><p>Importe questões autorais ou autorizadas com gabarito e comentários próprios. As incompletas ficam como rascunho.</p></div><button id="backToStudy" class="btn btn-soft">← Voltar ao banco</button></div>

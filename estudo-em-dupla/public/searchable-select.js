@@ -17,5 +17,5 @@
   input.onblur=()=>{querying=false;sync();close();};select.addEventListener('change',sync);
   new MutationObserver(()=>{sync();if(!list.hidden)results();}).observe(select,{childList:true,subtree:true,attributes:true,attributeFilter:['disabled','selected']});controls.push(sync);sync();
  }
- document.addEventListener('click',()=>setTimeout(()=>controls.forEach(sync),0));
+ document.addEventListener('click',()=>setTimeout(()=>controls.forEach(sync=>sync()),0));
 })();

@@ -212,7 +212,7 @@ function render(q){
     if(selected)b.classList.add('selected');
     if(q.revealed&&data.correct){if(opt.letter===data.correct)b.classList.add('correct');else if(selected)b.classList.add('wrong');}
     b.append(div('letter',opt.letter),div('answer-label',opt.text));
-    b.disabled=q.revealed||!!q.myAnswer;enableElimination(b,()=>command('answer',{choice:opt.letter,index:q.index}),`${code}:${role}:${q.index}:${data.id||data.statement}`,opt.letter);parent.append(b);
+    b.disabled=q.revealed;enableElimination(b,()=>command('answer',{choice:opt.letter,index:q.index}),`${code}:${role}:${q.index}:${data.id||data.statement}`,opt.letter);parent.append(b);
   }
   $('incompleteNotice').classList.toggle('hidden',!data.needsReview);
   $('feedback').classList.toggle('hidden',!q.revealed);
@@ -444,12 +444,16 @@ async function onAuthSubmit(e){
       $('authPassword').value='';
       return;
     }
+    await window.pageMotion?.exit($('authGate'));
+    $('authGate').classList.add('hidden');$('authLoading').classList.remove('hidden');
     await verifyLogin();
-  }catch(error){showAuthMessage(error.message,true);}
+    $('authLoading').classList.add('hidden');
+    window.pageMotion?.enter(code?$('workspace'):$('landing'));
+  }catch(error){$('authLoading').classList.add('hidden');$('authGate').classList.remove('hidden');showAuthMessage(error.message,true);}
   finally{button.disabled=false;}
 }
-async function verifyLogin(){
-  const result=await authFetch('me');
+async function verifyLogin(session){
+  const result=session||await authFetch('me');
   if(!result.authenticated)throw Error('Não foi possível confirmar seu login.');
   signedIn=true;isAdminAccount=Boolean(result.isAdmin);
   $('authGate').classList.add('hidden');$('landing').classList.remove('hidden');
@@ -459,7 +463,7 @@ async function verifyLogin(){
   $('landingDescription').textContent='Crie sua sala ou entre em uma sala aberta para estudar com outras pessoas.';
   $('bankNavLink').classList.remove('hidden');
   $('accountBar').classList.remove('hidden');$('accountEmail').textContent='Perfil';
-  try{const response=await fetch('/api/community/me',{credentials:'same-origin',cache:'no-store'});const data=await response.json();if(response.ok){$('hostName').value=data.profile.name;$('joinName').value=data.profile.name;}}catch{}
+  fetch('/api/community/me',{credentials:'same-origin',cache:'no-store'}).then(async response=>{if(!response.ok)return;const data=await response.json();$('hostName').value=data.profile.name;$('joinName').value=data.profile.name;}).catch(()=>{});
   $('authPassword').value='';
   await initializeApp();
 }
@@ -485,9 +489,9 @@ async function boot(){
   });
   try{
     const r=await authFetch('me');
-    if(r.authenticated){await verifyLogin();}
+    if(r.authenticated){await verifyLogin(r);}
     else {$('authGate').classList.remove('hidden');}
-  }catch(e){showAuthMessage(e.message,true);}
+  }catch(e){$('authGate').classList.remove('hidden');showAuthMessage(e.message,true);}finally{$('authLoading').classList.add('hidden');window.pageMotion?.enter(signedIn?(code?$('workspace'):$('landing')):$('authGate'));}
 }
 boot();
 

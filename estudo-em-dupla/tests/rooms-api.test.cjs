@@ -28,9 +28,14 @@ test('inatividade encerra a sala e persiste o encerramento',async()=>{
  const {call,rooms,saved,api}=fixture();const created=await call('room','owner',{maxParticipants:4,access:'open'});const code=created.data.code;rooms.get(code).lastActivity=Date.now()-31*60*1000;await api.sweep();assert.equal(saved.get(code).isOpen,false);assert.equal((await call(`room/${code}/join`,'p1',{})).status,409);assert.equal((await call('rooms','p1')).data.rooms.length,0);
 });
 
-test('troféus usam a primeira resposta conferida no servidor, sem duplicar envios',async()=>{
- const awards=[];const {call,rooms}=fixture({recordAnswer:async(...args)=>awards.push(args)});const created=await call('room','owner',{maxParticipants:3});const code=created.data.code;await call(`room/${code}/from-bank`,'owner',{});const wrong=rooms.get(code).questions[0].alternatives.find(a=>a.letter!==rooms.get(code).questions[0].correct).letter;await call(`room/${code}/answer`,'owner',{index:0,choice:wrong,correct:true});assert.equal(awards.length,1);assert.equal(awards[0][3],false);assert.equal((await call(`room/${code}/answer`,'owner',{index:0,choice:'A'})).status,409);assert.equal(awards.length,1);
+test('permite trocar antes da revelação e contabiliza apenas a resposta final',async()=>{
+ const awards=[];const {call,rooms}=fixture({recordAnswer:async(...args)=>awards.push(args)});const created=await call('room','owner',{maxParticipants:2});const code=created.data.code;await call(`room/${code}/join`,'p1',{});await call(`room/${code}/from-bank`,'owner',{});const correct=rooms.get(code).questions[0].correct,wrong=rooms.get(code).questions[0].alternatives.find(a=>a.letter!==correct).letter;
+ await call(`room/${code}/answer`,'owner',{index:0,choice:wrong});assert.equal(awards.length,0);
+ assert.equal((await call(`room/${code}/answer`,'owner',{index:0,choice:correct})).status,200);assert.equal((await call(`room/${code}/state`,'owner')).data.myAnswer,correct);assert.equal(awards.length,0);
+ await call(`room/${code}/answer`,'p1',{index:0,choice:wrong});assert.equal(awards.length,2);assert.equal(awards.find(a=>a[0]==='owner')[3],true);assert.equal(awards.find(a=>a[0]==='p1')[3],false);
+ assert.equal((await call(`room/${code}/answer`,'owner',{index:0,choice:wrong})).status,409);await call(`room/${code}/reveal`,'owner',{});assert.equal(awards.length,2);
 });
+
 test('somente o dono altera a senha, sem desconectar participantes existentes',async()=>{
  const {call,rooms}=fixture();const created=await call('room','owner',{maxParticipants:4});const code=created.data.code;await call(`room/${code}/join`,'p1',{});
  assert.equal((await call(`room/${code}/settings`,'p1',{access:'password',password:'1234'})).status,403);

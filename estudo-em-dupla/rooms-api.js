@@ -18,6 +18,11 @@ module.exports=function({rooms,databaseRequest,storageEnabled,parseJson,send,err
   async function load(code){let r=rooms.get(code);if(!r&&storageEnabled){const rows=await (await databaseRequest('dupla_rooms?'+new URLSearchParams({select:'state',code:'eq.'+code,limit:'1'}))).json();if(rows[0]){r={...rows[0].state,clients:new Set()};rooms.set(code,r);}}if(r){migrate(r);if(r.isOpen!==false&&Date.now()-r.lastActivity>=IDLE){r.isOpen=false;await store(r);notify(r);}}return r;}
   const member=(r,user)=>r.members.find(m=>m.userId===user.id);
   function publicQuestion(q,revealed=false){if(!q)return null;const {correct,commentary,...clean}=q;return revealed?{...clean,correct,commentary}:clean;}
+  async function finalizeAnswers(r,index){
+    const vote=r.votes[index],q=r.questions[index];if(!vote||!q||vote.recorded)return;
+    if(q.correct)for(const [userId,choice] of Object.entries(vote.choices||{}))if(choice)await recordAnswer(userId,r.code,q,choice===q.correct);
+    vote.recorded=true;vote.revealed=true;
+  }
   async function state(r,user){const profiles=await publicMembers(r.members.map(m=>m.userId));const vote=r.votes[r.index]||{choices:{},revealed:false};return {code:r.code,title:r.title,isOpen:r.isOpen!==false,role:r.hostUserId===user.id?'host':'guest',myUserId:user.id,index:r.index,questionsCount:r.questions.length,maxParticipants:r.maxParticipants,hasPassword:!!r.passwordHash,question:publicQuestion(r.questions[r.index],!!vote.revealed),questions:r.hostUserId===user.id?r.questions.map((q,i)=>({...publicQuestion(q),number:i+1})):undefined,myAnswer:vote.choices?.[user.id]||null,revealed:!!vote.revealed,participants:r.members.map(m=>{const p=profiles.find(p=>p.user_id===m.userId);return {userId:m.userId,name:p?.display_name||(!m.name?.includes('@')?m.name:'Participante'),avatar:p?.avatar_data||'',owner:m.userId===r.hostUserId,correctCount:r.questions.reduce((n,q,i)=>n+(q.correct&&r.votes[i]?.revealed&&r.votes[i]?.choices?.[m.userId]===q.correct?1:0),0),wrongCount:r.questions.reduce((n,q,i)=>n+(q.correct&&r.votes[i]?.revealed&&r.votes[i]?.choices?.[m.userId]&&r.votes[i]?.choices?.[m.userId]!==q.correct?1:0),0),answered:!!vote.choices?.[m.userId],answer:vote.revealed?vote.choices?.[m.userId]||null:null};}),lastActivity:r.lastActivity};}
   async function list(user){
     let catalog;
@@ -95,13 +100,12 @@ module.exports=function({rooms,databaseRequest,storageEnabled,parseJson,send,err
       if(action==='activity'){r.lastActivity=Date.now();await store(r);return send(res,200,{ok:true});}
       if(action==='answer'){
         const q=r.questions[r.index];if(!q||body.index!==r.index||!q.alternatives.some(a=>a.letter===body.choice))return err(res,400,'Questão ou alternativa inválida.');
-        const vote=r.votes[r.index]||={choices:{},revealed:false};if(vote.revealed||vote.choices[user.id])return err(res,409,'Sua resposta já foi registrada ou as escolhas foram reveladas.');
-        if(q.correct)await recordAnswer(user.id,r.code,q,body.choice===q.correct);
+        const vote=r.votes[r.index]||={choices:{},revealed:false};if(vote.revealed)return err(res,409,'As escolhas já foram reveladas. Não é possível trocar a resposta.');
         const solvedKey=crypto.createHash('sha256').update(q.statement).digest('hex');r.solvedQuestionKeys=[...new Set([...(r.solvedQuestionKeys||[]),solvedKey])];
         vote.choices[user.id]=body.choice;if(r.members.length>1&&r.members.every(x=>vote.choices[x.userId]))vote.revealed=true;
       }else{
         if(role!=='host')return err(res,403,'Somente o dono controla as questões.');
-        if(action==='close')r.isOpen=false;
+        if(action==='close'){for(const i of Object.keys(r.votes))await finalizeAnswers(r,Number(i));r.isOpen=false;}
         else if(action==='kick'){
           if(typeof body.userId!=='string'||body.userId===r.hostUserId||!r.members.some(m=>m.userId===body.userId))return err(res,400,'Selecione um participante da sala. O dono não pode ser expulso.');
           r.members=r.members.filter(m=>m.userId!==body.userId);
@@ -117,15 +121,16 @@ module.exports=function({rooms,databaseRequest,storageEnabled,parseJson,send,err
             const salt=crypto.randomBytes(16).toString('hex');r.passwordHash=(await scrypt(password,salt,32)).toString('hex');r.passwordSalt=salt;
           }else{r.passwordHash=null;r.passwordSalt=null;}
         }
-        else if(action==='navigate'){if(!Number.isInteger(body.index)||body.index<0||body.index>=r.questions.length)return err(res,400,'Questão inválida.');r.index=body.index;}
+        else if(action==='navigate'){if(!Number.isInteger(body.index)||body.index<0||body.index>=r.questions.length)return err(res,400,'Questão inválida.');if(body.index!==r.index)await finalizeAnswers(r,r.index);r.index=body.index;}
         else if(action==='reveal'){const vote=r.votes[r.index]||={choices:{},revealed:false};vote.revealed=true;}
         else if(action==='from-bank'){
           if(text(body.topic)&&!text(body.subject))return err(res,400,'Escolha uma disciplina antes de selecionar o assunto.');
           if(!storageEnabled)return err(res,503,'Configure o banco de questões.');
           r.solvedQuestionKeys=[...new Set([...(r.solvedQuestionKeys||[]),...r.questions.filter((q,i)=>Object.values(r.votes[i]?.choices||{}).some(Boolean)).map(q=>crypto.createHash('sha256').update(q.statement).digest('hex'))])];
-          const rows=await selectRoomQuestions({databaseRequest,room:r,body});if(!rows.length)return err(res,404,'Nenhuma questão atende aos filtros. Tente ampliar a seleção.');r.questions=shuffle(rows.map((x,i)=>normalizeQuestion({...x.data,id:x.id||x.data.id,topic:normalizeTopic(x.data?.topic)},i)).filter(Boolean).map(q=>prepareQuestion(q)));r.index=0;r.votes={};
+          const rows=await selectRoomQuestions({databaseRequest,room:r,body});if(!rows.length)return err(res,404,'Nenhuma questão atende aos filtros. Tente ampliar a seleção.');for(const i of Object.keys(r.votes))await finalizeAnswers(r,Number(i));r.questions=shuffle(rows.map((x,i)=>normalizeQuestion({...x.data,id:x.id||x.data.id,topic:normalizeTopic(x.data?.topic)},i)).filter(Boolean).map(q=>prepareQuestion(q)));r.index=0;r.votes={};
         }else return err(res,404,'Ação não encontrada.');
       }
+      if(r.votes[r.index]?.revealed)await finalizeAnswers(r,r.index);
       r.lastActivity=Date.now();await store(r);notify(r);return send(res,200,{ok:true,...(action==='from-bank'?{imported:r.questions.length}:{})});
     }finally{unlock();if(locks.get(code)===queued)locks.delete(code);}
   }
