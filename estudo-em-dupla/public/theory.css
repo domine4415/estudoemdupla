@@ -43,3 +43,10 @@
 @media(max-width:600px){.highlight-tools{bottom:12px;padding:10px;gap:6px}.highlight-tools button{font-size:12px;padding:8px}}
 
 .theory-filters{grid-template-columns:1fr auto}.theory-filters>[hidden]{display:none}.theory-folder{border-top:3px solid #7ecb96}.theory-folder>span{color:#a8bdcf;font-size:13px}#theoryBreadcrumbs{gap:8px}
+
+.lesson-toc{max-width:900px;margin:24px auto 0;padding:18px 22px;background:#132035;border:1px solid #34465d;border-left:3px solid #a2efb5;border-radius:10px;font-family:system-ui}
+.lesson-toc[hidden]{display:none}.lesson-toc summary{cursor:pointer;font-weight:750;color:#a2efb5;font-size:16px}.lesson-toc nav{display:grid;gap:4px;margin-top:14px;max-height:340px;overflow-y:auto}
+.toc-link{display:block;width:100%;border:0;background:transparent;color:#d8e5f4;text-align:left;padding:9px 10px;border-radius:5px;font-size:13px;line-height:1.5;white-space:normal;overflow-wrap:anywhere}
+.toc-link:hover,.toc-link:focus-visible{background:#253c40;color:#c5f7d0;outline:1px solid #6a9c7a}.toc-link.toc-subsection{padding-left:28px;color:#adc2d6}
+.lesson-paper .lesson-anchor{scroll-margin-top:28px}.lesson-paper .lesson-anchor:focus{outline:2px solid #77ab86;outline-offset:6px}
+@media print{.lesson-toc{display:none!important}.lesson-paper .lesson-anchor:focus{outline:none}}
