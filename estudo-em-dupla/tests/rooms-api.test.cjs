@@ -31,3 +31,17 @@ test('inatividade encerra a sala e persiste o encerramento',async()=>{
 test('troféus usam a primeira resposta conferida no servidor, sem duplicar envios',async()=>{
  const awards=[];const {call}=fixture({recordAnswer:async(...args)=>awards.push(args)});const created=await call('room','owner',{maxParticipants:3});const code=created.data.code;await call(`room/${code}/from-bank`,'owner',{});await call(`room/${code}/answer`,'owner',{index:0,choice:'B',correct:true});assert.equal(awards.length,1);assert.equal(awards[0][3],false);assert.equal((await call(`room/${code}/answer`,'owner',{index:0,choice:'A'})).status,409);assert.equal(awards.length,1);
 });
+test('somente o dono altera a senha, sem desconectar participantes existentes',async()=>{
+ const {call,rooms}=fixture();const created=await call('room','owner',{maxParticipants:4});const code=created.data.code;await call(`room/${code}/join`,'p1',{});
+ assert.equal((await call(`room/${code}/settings`,'p1',{access:'password',password:'1234'})).status,403);
+ assert.equal((await call(`room/${code}/settings`,'owner',{access:'password',password:'1234'})).status,200);assert.ok(rooms.get(code).passwordHash);
+ assert.equal((await call(`room/${code}/state`,'p1')).status,200);assert.equal((await call(`room/${code}/join`,'p2',{})).status,403);
+ await call(`room/${code}/settings`,'owner',{access:'open'});assert.equal(rooms.get(code).passwordHash,null);assert.equal((await call(`room/${code}/join`,'p2',{})).status,200);
+});
+test('dono expulsa, libera vaga, corta eventos e permite reentrada',async()=>{
+ const {call,rooms}=fixture();const created=await call('room','owner',{maxParticipants:3});const code=created.data.code;await call(`room/${code}/join`,'p1',{});await call(`room/${code}/join`,'p2',{});
+ assert.equal((await call(`room/${code}/kick`,'p1',{userId:'p2'})).status,403);assert.equal((await call(`room/${code}/kick`,'owner',{userId:'owner'})).status,400);
+ const events=[];let ended=false;const client={roomUserId:'p1',write:event=>events.push(event),end:()=>ended=true};rooms.get(code).clients.add(client);
+ assert.equal((await call(`room/${code}/kick`,'owner',{userId:'p1'})).status,200);assert.equal(ended,true);assert.ok(events.some(e=>e.includes('expelled')));assert.equal(rooms.get(code).members.length,2);
+ assert.equal((await call(`room/${code}/state`,'p1')).status,403);assert.equal((await call(`room/${code}/join`,'p1',{})).status,200);assert.equal((await call(`room/${code}/join`,'p3',{})).status,409);
+});

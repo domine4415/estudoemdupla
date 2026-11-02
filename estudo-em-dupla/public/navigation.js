@@ -22,6 +22,7 @@
     const params=new URLSearchParams(location.search),workspace=document.getElementById('workspace');
     const home=['/','/index.html'].includes(location.pathname)&&!params.has('room')&&!params.has('view')&&!params.has('action')&&(!workspace||workspace.classList.contains('hidden'));
     body.classList.toggle('is-home',home);
+    body.classList.toggle('is-inside-room',!!workspace&&!workspace.classList.contains('hidden'));
     bar.hidden=home;back.hidden=home;
     body.classList.toggle('is-room-directory',params.get('view')==='salas');
     body.classList.toggle('is-room-create',params.get('action')==='criar');

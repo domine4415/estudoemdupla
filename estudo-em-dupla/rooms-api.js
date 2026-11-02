@@ -82,6 +82,21 @@ module.exports=function({rooms,databaseRequest,storageEnabled,parseJson,send,err
       }else{
         if(role!=='host')return err(res,403,'Somente o dono controla as questões.');
         if(action==='close')r.isOpen=false;
+        else if(action==='kick'){
+          if(typeof body.userId!=='string'||body.userId===r.hostUserId||!r.members.some(m=>m.userId===body.userId))return err(res,400,'Selecione um participante da sala. O dono não pode ser expulso.');
+          r.members=r.members.filter(m=>m.userId!==body.userId);
+          for(const c of [...r.clients])if(c.roomUserId===body.userId){r.clients.delete(c);try{c.write('event: expelled\ndata: {}\n\n');c.end();}catch{}}
+          for(const c of r.clients)try{c.write('event: voice\ndata: '+JSON.stringify({type:'leave',from:body.userId,session:'*'})+'\n\n');}catch{}
+          const vote=r.votes[r.index];if(vote&&!vote.revealed&&r.members.length>1&&r.members.every(m=>vote.choices[m.userId]))vote.revealed=true;
+        }
+        else if(action==='settings'){
+          const mode=body.access,password=typeof body.password==='string'?body.password:'';
+          if(!['open','password'].includes(mode))return err(res,400,'Escolha entrada aberta ou com senha.');
+          if(mode==='password'){
+            if(password.length<4||password.length>100)return err(res,400,'A senha deve ter de 4 a 100 caracteres.');
+            const salt=crypto.randomBytes(16).toString('hex');r.passwordHash=(await scrypt(password,salt,32)).toString('hex');r.passwordSalt=salt;
+          }else{r.passwordHash=null;r.passwordSalt=null;}
+        }
         else if(action==='navigate'){if(!Number.isInteger(body.index)||body.index<0||body.index>=r.questions.length)return err(res,400,'Questão inválida.');r.index=body.index;}
         else if(action==='reveal'){const vote=r.votes[r.index]||={choices:{},revealed:false};vote.revealed=true;}
         else if(action==='from-bank'){

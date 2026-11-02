@@ -29,3 +29,12 @@ test('amizade só pode ser aceita pelo destinatário e convites exigem participa
 test('registro de conquistas usa RPC privada e chave estável da questão',async()=>{
  const {api,writes}=fixture();await api.recordAnswer(owner,'ABC234',{statement:'Questão'},false);const event=writes.at(-1);assert.equal(event.endpoint,'rpc/policial_record_room_answer');assert.equal(event.body.p_user,owner);assert.equal(event.body.p_correct,false);assert.match(event.body.p_question,/^[a-f0-9]{64}$/);
 });
+test('eventos avisam o navegador e presença retorna contadores por categoria',async()=>{
+ const {api,call}=fixture();let cleanup;const messages=[];
+ const res={writeHead(){},write:data=>messages.push(data)};
+ await api.handle({method:'GET',on:(_,fn)=>cleanup=fn},res,new URL('http://local/api/community/events'),{id:owner});
+ try{
+  assert.equal((await call('friend',{action:'accept',id:'33333333-3333-4333-8333-333333333333'})).status,200);assert.ok(messages.some(s=>s.includes('event: notifications')));
+  const presence=await call('presence',{});assert.equal(presence.status,200);assert.equal(presence.data.friendRequests.length,1);assert.equal(presence.data.invitations.length,0);assert.equal(presence.data.notifications,1);
+ }finally{cleanup();}
+});

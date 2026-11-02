@@ -11,3 +11,11 @@
 @media(max-width:720px){.is-home .topbar{flex-wrap:wrap;height:auto;min-height:68px;padding:14px}.is-home .account-bar{display:flex;gap:8px}.is-home #accountEmail{display:inline-flex}}
 
 .page-navigation[hidden],.page-back[hidden],#communityNotifications{display:none!important}
+
+.is-room-directory>.topbar,.is-room-create>.topbar{display:none!important}
+.is-inside-room>.topbar{justify-content:flex-end;min-height:52px;height:auto;padding:12px 24px}
+.is-inside-room>.topbar>*:not(#topRoom){display:none!important}
+.is-inside-room #topRoom{display:flex;flex-wrap:wrap;justify-content:flex-end}
+@media(max-width:720px){.is-inside-room>.topbar{padding:10px 14px}}
+
+.has-notification-badge{position:relative}.notification-badge{position:absolute;right:8px;top:3px;min-width:19px;height:19px;display:inline-flex!important;align-items:center;justify-content:center;padding:0 5px;background:#e73d50;color:#fff;border:2px solid #152238;border-radius:999px;font:800 10px/1 system-ui;opacity:1!important;z-index:2;letter-spacing:0}.community-notification-toast{position:fixed;right:20px;bottom:24px;z-index:200;display:flex;align-items:center;gap:12px;max-width:min(400px,calc(100vw - 28px));padding:16px 18px;background:#1a3040;border:1px solid #7dc595;border-radius:12px;box-shadow:0 10px 35px #0007;color:#e6f7ec;font:13px/1.6 system-ui}.community-notification-toast a{text-decoration:none}.community-notification-toast button{border:0;background:none;color:#d7eddf;font-size:22px;padding:0 5px}.app-sidebar-link .notification-badge{right:6px;top:5px}

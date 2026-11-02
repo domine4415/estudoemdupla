@@ -88,3 +88,8 @@ body{background:radial-gradient(ellipse 55% 35% at 53% 0%,rgba(59,120,102,.12),t
 .room-profile-photo{width:42px;height:42px;border-radius:50%;object-fit:cover;border:2px solid #9addad}#roomParticipants a{font-size:12px;font-weight:750;color:#d7ebdf;text-decoration:none}#roomParticipants a:hover{text-decoration:underline}
 
 #roomParticipants .player-status{display:grid;grid-template-columns:42px minmax(0,1fr);column-gap:10px;align-items:center}#roomParticipants .room-profile-photo{grid-column:1;grid-row:1/3}#roomParticipants a,#roomParticipants small{grid-column:2;overflow-wrap:anywhere}
+
+#roomParticipants .player-status{grid-template-columns:42px minmax(0,1fr) 32px;transition:background .15s}.voice-wave{grid-column:3;grid-row:1/3;display:flex;align-items:center;justify-content:center;gap:3px;height:25px}.voice-wave i{width:3px;height:4px;border-radius:3px;background:#527166;transition:height .15s}.is-speaking .voice-wave i{background:#a2efb5;animation:voiceWave .55s ease-in-out infinite alternate}.is-speaking .voice-wave i:nth-child(2){animation-delay:-.2s}.is-speaking .voice-wave i:nth-child(3){animation-delay:-.4s}.is-speaking .voice-wave i:nth-child(4){animation-delay:-.1s}.is-speaking .voice-wave i:nth-child(5){animation-delay:-.3s}#roomParticipants .is-speaking .room-profile-photo{box-shadow:0 0 0 3px #84e9a655}#roomParticipants .is-speaking{background:#25443644;border-radius:8px}@keyframes voiceWave{from{height:5px}to{height:23px}}
+@media(prefers-reduced-motion:reduce){.is-speaking .voice-wave i{animation:none;height:18px}}
+
+#roomParticipants .room-kick{grid-column:2/4;justify-self:start;font-size:10px;padding:5px 8px;margin-top:5px;color:#f4b9b9}

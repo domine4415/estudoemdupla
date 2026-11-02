@@ -151,3 +151,14 @@ Verificação das regras de salas e comunidade: `node --test tests/rooms-api.tes
 ### Home e navegação das salas
 
 A Home concentra os cartões de acesso e os botões Perfil e Sair da conta. Sem e-mail exibido, sem barra extra de navegação e sem formulários ou listagem de salas nessa tela. Salas ao vivo abre /?view=salas; Criar sala abre /?action=criar. O nome do participante vem do perfil e não pode ser alterado no formulário da sala; para mudar, use Meu perfil. O servidor usa o perfil autenticado mesmo que alguém tente enviar outro nome.
+
+
+### Voz, avisos e controles das salas
+
+A lista de participantes mostra barras animadas conforme o volume real de cada microfone na chamada, tanto local quanto remoto. Na página de salas/criação, o cabeçalho redundante fica oculto; dentro da sala, ficam somente Sala, código e Copiar link, além da navegação lateral e do botão Voltar.
+
+O dono pode definir, trocar ou remover a senha em Editar senha da sala, sem desconectar quem já entrou. Pode também Expulsar um participante: corta sua conexão com a sala e o áudio e libera a vaga. Expulsão não bloqueia a conta; a pessoa pode entrar novamente se houver vaga e respeitando a senha atual.
+
+Solicitações de amizade e convites mostram contador vermelho nos acessos da comunidade e nas abas correspondentes. Um novo aviso aparece dentro do site e toca um som curto, após a primeira interação com a página liberar o áudio. Os eventos são enviados por conexão persistente, com verificação a cada 10 segundos como alternativa. Esse aviso é do site aberto, não uma notificação do sistema com o navegador fechado.
+
+Para atualizar, publique rooms-api.js, community-api.js e a pasta public atualizada. Não exige novo SQL em relação à versão da Comunidade.

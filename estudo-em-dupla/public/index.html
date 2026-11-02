@@ -92,7 +92,7 @@
       </div>
       <div class="sidebar-list-top"><div class="eyebrow">QUESTÕES <span id="questionTotal">0</span></div><div class="muted tiny">Clique para navegar</div></div>
       <div id="questionList" class="question-list"><p class="empty-sidebar">Importe um JSON para começar.</p></div>
-      <div class="sidebar-footer"><button id="closeRoom" class="btn btn-outline btn-full host-only">Encerrar sala</button><button id="exitRoom" class="btn btn-ghost">Voltar às salas</button></div>
+      <div class="sidebar-footer"><button id="roomSettings" class="btn btn-soft btn-full host-only" type="button">Editar senha da sala</button><button id="closeRoom" class="btn btn-outline btn-full host-only">Encerrar sala</button><button id="exitRoom" class="btn btn-ghost">Voltar às salas</button></div>
     </aside>
 
     <section class="content">
@@ -132,5 +132,6 @@
     <div class="modal-actions"><button type="submit" class="btn btn-primary">Salvar correção</button></div>
   </form>
 </dialog>
+<dialog id="roomSettingsDialog" class="modal"><div class="modal-title"><h2>Senha da sala</h2><button id="closeRoomSettings" class="btn btn-soft" type="button">Fechar</button></div><form id="roomSettingsForm"><label for="settingsAccess">Entrada na sala</label><select id="settingsAccess"><option value="open">Aberta (remover senha)</option><option value="password">Definir ou trocar senha</option></select><label for="settingsPassword">Nova senha</label><input id="settingsPassword" type="password" minlength="4" maxlength="100" autocomplete="new-password"><p>Quem já está na sala continua conectado. A alteração vale para as próximas entradas.</p><button id="saveRoomSettings" class="btn btn-primary" type="submit">Salvar alteração</button><p id="settingsStatus" role="status"></p></form></dialog>
 </body>
 </html>
