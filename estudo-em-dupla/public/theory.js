@@ -284,14 +284,27 @@ window.addEventListener('beforeunload',event=>{if(dirty){event.preventDefault();
 let selectedLessonQuestions=new Map(),lessonBankFacets=null,lessonBankPage=1,lessonBankRequest=0;
 let lessonExerciseIds=[],lessonExerciseIndex=0,lessonExerciseGeneration=0;
 const lessonExerciseCache=new Map();
+let selectedQuestionsPage=1;
 function drawSelectedLessonQuestions(){
-  $('lessonSelectedCount').textContent=selectedLessonQuestions.size+' questões selecionadas (máximo 200)';
-  const root=$('lessonSelectedQuestions');root.replaceChildren();
-  for(const [id,label] of selectedLessonQuestions){const row=el('div');row.className='lesson-question-pick';const remove=el('button','Remover');remove.type='button';remove.className='btn btn-outline';remove.onclick=()=>{selectedLessonQuestions.delete(id);dirty=true;drawSelectedLessonQuestions();};row.append(el('span',label),remove);root.append(row);}
+ const entries=[...selectedLessonQuestions],pageSize=5;
+ selectedQuestionsPage=Math.max(1,Math.min(selectedQuestionsPage,Math.ceil(entries.length/pageSize)||1));
+ $('lessonSelectedCount').textContent=entries.length+' questões selecionadas (máximo 200)';
+ const root=$('lessonSelectedQuestions');root.replaceChildren();
+ const details=el('details');details.className='lesson-selected-list';const summary=el('summary','Gerenciar questões selecionadas ('+entries.length+')');details.append(summary);root.append(details);
+ const list=el('div');details.append(list);
+ function paint(){list.replaceChildren();const start=(selectedQuestionsPage-1)*pageSize;
+ for(const [id,label] of entries.slice(start,start+pageSize)){const row=el('div');row.className='lesson-question-pick';const remove=el('button','Remover');remove.type='button';remove.className='btn btn-outline';remove.onclick=()=>{selectedLessonQuestions.delete(id);dirty=true;drawSelectedLessonQuestions();$('lessonSelectedQuestions').querySelector('details').open=true;};row.append(el('span',label),remove);list.append(row);}
+ const nav=el('div');nav.className='reader-actions';const previous=el('button','← Anterior'),next=el('button','Próxima →');for(const button of [previous,next]){button.type='button';button.className='btn btn-soft';}previous.disabled=selectedQuestionsPage===1;next.disabled=start+pageSize>=entries.length;previous.onclick=()=>{selectedQuestionsPage--;paint();};next.onclick=()=>{selectedQuestionsPage++;paint();};nav.append(previous,el('span','Página '+selectedQuestionsPage+' de '+(Math.ceil(entries.length/pageSize)||1)),next);list.append(nav);
+ }
+ details.ontoggle=()=>{if(details.open)paint();};
 }
-function lessonMultiOptions(id,values,emptyLabel='Todos (nenhuma seleção)'){
- const root=$(id);root.replaceChildren(el('small',emptyLabel));
- for(const value of [...new Set(values)]){const label=el('label'),input=el('input');input.type='checkbox';input.value=String(value);label.append(input,document.createTextNode(String(value)));root.append(label);}
+function lessonMultiOptions(id,values,emptyLabel='Todas'){
+ const root=$(id);root.replaceChildren();
+ const details=el('details');details.className='lesson-filter-dropdown';const summary=el('summary',emptyLabel.startsWith('Escolha')?emptyLabel:'Todas');details.append(summary);root.append(details);
+ const menu=el('div');menu.className='lesson-filter-menu';const search=el('input');search.type='search';search.placeholder='Pesquisar opções';search.setAttribute('aria-label','Pesquisar opções');menu.append(search);const options=el('div');options.className='lesson-filter-options';menu.append(options);details.append(menu);
+ for(const value of [...new Set(values)]){const label=el('label'),input=el('input');input.type='checkbox';input.value=String(value);input.onchange=()=>{const checked=[...root.querySelectorAll('input:checked')];summary.textContent=checked.length?checked.length+' selecionado'+(checked.length===1?'':'s'):'Todas';};label.append(input,document.createTextNode(String(value)));options.append(label);}
+ search.oninput=()=>{const normalize=v=>v.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();for(const label of options.children)label.hidden=!normalize(label.textContent).includes(normalize(search.value));};
+ if(!values.length){search.disabled=true;options.append(el('small',emptyLabel.startsWith('Escolha')?emptyLabel:'Nenhuma opção disponível'));}
 }
 function lessonBankTopics(){const subject=$('lessonBankSubject').value;lessonMultiOptions('lessonBankTopic',subject?(lessonBankFacets?.pairs||[]).filter(p=>p.subject===subject).map(p=>p.topic):[],subject?'Todos os assuntos (nenhuma seleção)':'Escolha a disciplina primeiro');}
 function lessonQuestionFilters(){
@@ -300,7 +313,7 @@ function lessonQuestionFilters(){
  return filters;
 }
 async function prepareLessonQuestions(lesson){
-  selectedLessonQuestions=new Map((lesson?.question_ids||[]).map((id,i)=>[id,'Questão vinculada '+(i+1)+' · '+id]));drawSelectedLessonQuestions();
+  selectedQuestionsPage=1;selectedLessonQuestions=new Map((lesson?.question_ids||[]).map((id,i)=>[id,'Questão vinculada '+(i+1)+' · '+id]));drawSelectedLessonQuestions();
   $('lessonBankResults').replaceChildren();$('lessonBankStatus').textContent='';lessonBankPage=1;++lessonBankRequest;
   try{if(!lessonBankFacets)lessonBankFacets=await api('bank/facets');const select=$('lessonBankSubject');select.replaceChildren();const first=el('option','Todas as disciplinas');first.value='';select.append(first);for(const value of lessonBankFacets.subjects||[]){const option=el('option',value);option.value=value;select.append(option);}select.value=lesson?.subject||'';lessonMultiOptions('lessonBankBoard',lessonBankFacets.boards||[]);lessonMultiOptions('lessonBankYear',(lessonBankFacets.years||[]).map(String));lessonBankTopics();}catch(e){$('lessonBankStatus').textContent=e.message;}
 }
@@ -319,8 +332,14 @@ async function drawLessonExercise(){
  root.replaceChildren();root.append(el('p',[q.subject,q.topic,q.board,q.year].filter(Boolean).join(' / ')));const statement=el('div');statement.className='lesson-exercise-statement';inline(statement,q.statement);root.append(statement);
  const answers=el('div');answers.className='lesson-exercise-answers';const feedback=el('div');feedback.className='lesson-exercise-feedback';
  function showResult(result){for(const button of answers.querySelectorAll('button')){button.disabled=true;button.classList.toggle('is-correct',button.dataset.choice===result.correct);button.classList.toggle('is-wrong',button.dataset.choice===result.choice&&!result.isCorrect);}feedback.replaceChildren(el('strong',result.correct?(result.isCorrect?'Resposta correta.':'Resposta incorreta.')+' Gabarito: '+result.correct:'Resposta registrada.'));if(result.commentary){const toggle=el('button','Exibir comentário');toggle.type='button';toggle.className='btn btn-soft';toggle.setAttribute('aria-expanded','false');const explanation=el('div');explanation.id='lesson-question-commentary';explanation.hidden=true;toggle.setAttribute('aria-controls',explanation.id);renderBlocks(explanation,{content:result.commentary});toggle.onclick=()=>{explanation.hidden=!explanation.hidden;toggle.textContent=explanation.hidden?'Exibir comentário':'Fechar comentário';toggle.setAttribute('aria-expanded',String(!explanation.hidden));};feedback.append(el('p'),toggle,explanation);}}
- for(const alt of q.alternatives||[]){const button=el('button',alt.letter+' — '+alt.text);button.type='button';button.className='btn btn-outline';button.dataset.choice=alt.letter;button.onclick=async()=>{for(const b of answers.querySelectorAll('button'))b.disabled=true;feedback.textContent='Salvando resposta...';try{const result=await api('bank/answer','POST',{id,choice:alt.letter});q.lastAttempt={choice:alt.letter,isCorrect:result.isCorrect};q.correct=result.correct;q.commentary=result.commentary;if(generation===lessonExerciseGeneration)showResult(result);}catch(e){if(generation!==lessonExerciseGeneration)return;feedback.textContent=e.message;for(const b of answers.querySelectorAll('button'))b.disabled=false;}};answers.append(button);}
- root.append(answers,feedback);if(q.lastAttempt)showResult({...q.lastAttempt,correct:q.correct,commentary:q.commentary});
+ let selected=null,busy=false;const confirm=el('button','Responder');confirm.type='button';confirm.className='btn btn-primary';confirm.disabled=true;
+ for(const alt of q.alternatives||[]){const row=el('div');row.className='lesson-alternative-row';const button=el('button',alt.letter+' — '+alt.text);button.type='button';button.className='btn btn-outline';button.dataset.choice=alt.letter;
+ button.onclick=()=>{if(busy||button.classList.contains('eliminated'))return;selected=alt.letter;for(const option of answers.querySelectorAll('[data-choice]')){option.classList.toggle('selected',option===button);option.setAttribute('aria-pressed',String(option===button));}confirm.disabled=false;};
+ button.ondblclick=event=>{event.preventDefault();if(busy||button.disabled)return;const crossed=button.classList.toggle('eliminated');button.setAttribute('aria-label',(crossed?'Alternativa riscada: ':'Alternativa: ')+button.textContent);if(crossed&&selected===alt.letter){selected=null;confirm.disabled=true;button.classList.remove('selected');button.setAttribute('aria-pressed','false');}};row.append(button);answers.append(row);}
+
+ confirm.onclick=async()=>{if(!selected||busy)return;busy=true;confirm.disabled=true;for(const b of answers.querySelectorAll('button'))b.disabled=true;feedback.textContent='Salvando resposta...';try{const result=await api('bank/answer','POST',{id,choice:selected});q.lastAttempt={choice:selected,isCorrect:result.isCorrect};q.correct=result.correct;q.commentary=result.commentary;if(generation===lessonExerciseGeneration){showResult(result);confirm.hidden=true;}}catch(e){if(generation!==lessonExerciseGeneration)return;feedback.textContent=e.message;confirm.disabled=false;for(const b of answers.querySelectorAll('button'))b.disabled=false;}finally{busy=false;}};
+ root.append(answers,confirm,feedback);if(q.lastAttempt){showResult({...q.lastAttempt,correct:q.correct,commentary:q.commentary});confirm.hidden=true;}
+
  }catch(e){if(generation===lessonExerciseGeneration){root.replaceChildren(el('p','Esta questão está indisponível. '+e.message));const retry=el('button','Tentar novamente');retry.className='btn btn-soft';retry.type='button';retry.onclick=drawLessonExercise;root.append(retry);}}
 }
 $('lessonBankSubject').onchange=lessonBankTopics;
@@ -353,3 +372,6 @@ async function addAllLessonBankQuestions(){
  }catch(e){$('lessonBankStatus').textContent=e.message;}finally{button.disabled=false;}
 }
 $('lessonBankAddAll').onclick=addAllLessonBankQuestions;
+
+document.addEventListener('click',event=>{for(const details of document.querySelectorAll('.lesson-filter-dropdown[open]'))if(!details.contains(event.target))details.open=false;});
+document.addEventListener('keydown',event=>{if(event.key==='Escape')for(const details of document.querySelectorAll('.lesson-filter-dropdown[open]'))details.open=false;});

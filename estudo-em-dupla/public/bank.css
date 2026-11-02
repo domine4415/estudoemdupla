@@ -77,3 +77,4 @@ a.brand{text-decoration:none}.bank-topbar{gap:14px}.bank-nav{display:flex;align-
 /* Evita repinturas de grandes cartões ao passar pelo cursor durante a rolagem. */
 .bank-results .inline-question{transition:border-color .15s}.bank-results .inline-question:hover{box-shadow:none}
 .bank-multi{padding:10px;background:#0d1728;border:1px solid #324056;border-radius:10px}.bank-multi small{display:block;color:#a3b4c8;margin:8px 0}.bank-multi-list{max-height:150px;overflow:auto}.bank-multi-list label{display:flex;align-items:center;gap:8px;padding:6px 0;cursor:pointer}.bank-multi-list label[hidden]{display:none}.bank-multi-list input[type=checkbox]{width:17px;height:17px;flex-shrink:0;accent-color:#a2efb5}select[data-bank-multi][hidden]{display:none!important}
+.answer.selected{border-color:#a2efb5;background:#214639;box-shadow:0 0 0 1px #a2efb5}.answer-options+.btn-primary{margin:16px 0}

@@ -96,6 +96,12 @@ function collapsibleBankCommentary(text){
  button.onclick=()=>{comment.hidden=!comment.hidden;button.textContent=comment.hidden?'Exibir comentário':'Fechar comentário';button.setAttribute('aria-expanded',String(!comment.hidden));};
  wrapper.append(button,comment);return wrapper;
 }
+function bankAnswerConfirmation(list,submit){
+ const button=elt('button','btn btn-primary','Responder');button.type='button';button.disabled=true;let choice=null,busy=false;
+ list.after(button);
+ button.onclick=async()=>{if(!choice||busy)return;const selected=list.querySelector('[data-choice="'+choice+'"]');if(selected?.classList.contains('eliminated')){choice=null;button.disabled=true;return;}busy=true;button.disabled=true;try{await submit(choice);button.hidden=true;}catch(e){notify(e.message,true);button.disabled=false;}finally{busy=false;}};
+ return letter=>{if(busy)return;choice=letter;for(const option of list.querySelectorAll('[data-choice]')){option.classList.toggle('selected',option.dataset.choice===letter);option.setAttribute('aria-pressed',String(option.dataset.choice===letter));}button.disabled=false;};
+}
 function renderInlineQuestion(r){
  const card=elt('article','inline-question');card.dataset.questionId=r.id;
  const header=elt('div','inline-header');header.append(elt('span','eyebrow',`${r.subject} / ${r.topic}`),elt('span','pill',r.type==='true_false'?'CERTO OU ERRADO':'MÚLTIPLA ESCOLHA'));
@@ -113,14 +119,9 @@ function renderInlineQuestion(r){
    feedback.classList.remove('hidden');feedback.classList.toggle('wrong',!result.isCorrect);
    banner.textContent='✓ Respondida nesta filtragem.';
  }
- for(const alt of r.alternatives||[]){
-   const b=elt('button','answer');b.type='button';b.dataset.choice=alt.letter;b.append(elt('span','letter',alt.letter),elt('span','answer-label',alt.text));
-   b.disabled=Boolean(resolved);
-   enableElimination(b,withAsync(b,async()=>{opts.querySelectorAll('button').forEach(x=>x.disabled=true);
-     try{const result=await api('bank/answer','POST',{id:r.id,choice:alt.letter});responseCache.set(r.id,{choice:alt.letter,isCorrect:result.isCorrect,generation:filterGeneration,result});displayAnswer(result);loadProgress();}
-     catch(e){opts.querySelectorAll('button').forEach(x=>x.disabled=false);throw e;}
-   }),`banco:${r.id}`,alt.letter);opts.append(b);
- }
+ const choose=bankAnswerConfirmation(opts,async choice=>{opts.querySelectorAll('button').forEach(x=>x.disabled=true);try{const result=await api('bank/answer','POST',{id:r.id,choice});responseCache.set(r.id,{choice,isCorrect:result.isCorrect,generation:filterGeneration,result});displayAnswer(result);loadProgress();}catch(e){opts.querySelectorAll('button').forEach(x=>x.disabled=false);throw e;}});
+ for(const alt of r.alternatives||[]){const b=elt('button','answer');b.type='button';b.dataset.choice=alt.letter;b.append(elt('span','letter',alt.letter),elt('span','answer-label',alt.text));b.disabled=Boolean(resolved);enableElimination(b,()=>choose(alt.letter),`banco:${r.id}`,alt.letter);opts.append(b);}
+ if(resolved)opts.nextElementSibling.hidden=true;
  if(resolved && prior.result)displayAnswer(prior.result);
  else if(resolved){api('bank/question/'+r.id).then(d=>{if(card.isConnected && responseCache.get(r.id)?.generation===filterGeneration){const result={choice:prior.choice,correct:d.question.correct,isCorrect:prior.isCorrect,commentary:d.question.commentary};responseCache.set(r.id,{...prior,result});displayAnswer(result);}}).catch(()=>{});}
  card.append(elt('div','question-separator'));
@@ -159,7 +160,7 @@ function showFeedback({choice,correct,isCorrect,commentary},wasOld=false){
   const explanation=elt('div','',`Você marcou ${choice}. Gabarito: ${correct}.`);
   f.append(headline,explanation);
   const comment=collapsibleBankCommentary(commentary||'Esta questão ainda não possui comentário explicativo.');
-  f.append(comment);f.classList.remove('hidden');
+  f.append(comment);if($('bankConfirmAnswer'))$('bankConfirmAnswer').hidden=true;f.classList.remove('hidden');
   $('repeatQuestion').classList.remove('hidden');
   for(const b of $('bankOptions').querySelectorAll('button')){
     b.disabled=true;if(b.dataset.choice===correct)b.classList.add('correct');else if(b.dataset.choice===choice)b.classList.add('wrong');
@@ -175,14 +176,9 @@ function renderCurrent(){
   $('bankStatement').textContent=q.statement;
   const list=$('bankOptions');list.replaceChildren();$('bankFeedback').classList.add('hidden');$('repeatQuestion').classList.add('hidden');
   $('adminEditCurrent').classList.toggle('hidden',!admin);
-  for(const alt of q.alternatives){
-    const b=elt('button','answer');b.type='button';b.dataset.choice=alt.letter;
-    b.append(elt('span','letter',alt.letter),elt('span','answer-label',alt.text));
-    enableElimination(b,withAsync(b,async()=>{for(const btn of list.querySelectorAll('button'))btn.disabled=true;
-      try{const result=await api('bank/answer','POST',{id:q.id,choice:alt.letter});showFeedback(result);}catch(e){for(const btn of list.querySelectorAll('button'))btn.disabled=false;throw e;}
-    }),`banco:${q.id}`,alt.letter);
-    list.append(b);
-  }
+  document.getElementById('bankConfirmAnswer')?.remove();
+  const choose=bankAnswerConfirmation(list,async choice=>{for(const btn of list.querySelectorAll('button'))btn.disabled=true;try{const result=await api('bank/answer','POST',{id:q.id,choice});showFeedback(result);}catch(e){for(const btn of list.querySelectorAll('button'))btn.disabled=false;throw e;}});list.nextElementSibling.id='bankConfirmAnswer';
+  for(const alt of q.alternatives){const b=elt('button','answer');b.type='button';b.dataset.choice=alt.letter;b.append(elt('span','letter',alt.letter),elt('span','answer-label',alt.text));enableElimination(b,()=>choose(alt.letter),`banco:${q.id}`,alt.letter);list.append(b);}
   if(q.lastAttempt && q.correct){
     showFeedback({choice:q.lastAttempt.choice,correct:q.correct,isCorrect:q.lastAttempt.isCorrect,commentary:q.commentary},true);
   }
