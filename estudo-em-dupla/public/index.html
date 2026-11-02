@@ -6,8 +6,9 @@
 <meta name="theme-color" content="#0a1020" />
 <title>ESTUDO POLICIAL • Preparação para carreiras policiais</title>
 <link rel="stylesheet" href="/styles.css" />
+<script src="/room-voice.js" defer></script>
 <script src="/app.js" defer></script>
-</head>
+<link rel="stylesheet" href="/navigation.css"><script src="/navigation.js" defer></script><script src="/presence.js" defer></script></head>
 <body>
 <header class="topbar">
   <div class="brand"><span class="brand-mark"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 4 6v6c0 5 8 9 8 9s8-4 8-9V6z"/><path d="m8.5 12 2.3 2.3 4.7-4.8"/></svg></span><span>ESTUDO<span class="brand-secondary"> POLICIAL</span></span></div>
@@ -44,28 +45,29 @@
     <p class="hero-desc" id="landingDescription">Escolha uma sala de treinamento e resolva questões em tempo real.</p>
     <p id="serverNotice" class="server-notice hidden" role="alert"></p>
     <section class="home-actions" aria-label="Acessos principais">
+<a href="/comunidade" class="home-action"><span class="action-icon">♧</span><span class="action-copy"><strong>Comunidade e perfil</strong><small>Pessoas online, amigos, convites e troféus</small></span><span class="action-arrow">→</span></a>
       <a href="/teoria" class="home-action"><span class="action-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h6a3 3 0 0 1 3 3v14a4 4 0 0 0-4-3H4z"/><path d="M13 7a3 3 0 0 1 3-3h5v14h-4a4 4 0 0 0-4 3M7 8h3M7 12h3M16 8h2M16 12h2"/></svg></span><span class="action-copy"><strong>Teoria</strong><small>Aulas esquematizadas por disciplina e tópico</small></span><span class="action-arrow">→</span></a>
       <a href="/banco" class="home-action"><span class="action-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v16H6.5A2.5 2.5 0 0 0 4 21z"/><path d="M4 5.5v13A2.5 2.5 0 0 1 6.5 16H20M8 7h8M8 11h6"/></svg></span><span class="action-copy"><strong>Banco de questões</strong><small>Resolva questões no seu ritmo</small></span><span class="action-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M5 12h14m-6-6 6 6-6 6"/></svg></span></a>
       <a href="/banco#estatisticas" class="home-action"><span class="action-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M7 17v-5m5 5V7m5 10v-7"/></svg></span><span class="action-copy"><strong>Estatísticas</strong><small>Acompanhe acertos e evolução</small></span><span class="action-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M5 12h14m-6-6 6 6-6 6"/></svg></span></a>
-      <a href="#salas-abertas" class="home-action"><span class="action-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3"/><path d="M3 19v-2a6 6 0 0 1 12 0v2H3zM17 5a3 3 0 0 1 0 6m1 3a5 5 0 0 1 3 5"/></svg></span><span class="action-copy"><strong>Salas ao vivo</strong><small>Estude com outro participante</small></span><span class="action-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M5 12h14m-6-6 6 6-6 6"/></svg></span></a>
-      <button id="openCreatePanel" type="button" class="home-action hidden" aria-controls="createRoomPanel" aria-expanded="false"><span class="action-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="3" width="18" height="18" rx="4"/><path d="M12 7v10M7 12h10"/></svg></span><span class="action-copy"><strong>Criar sala</strong><small>Acesso exclusivo do administrador</small></span><span class="action-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M5 12h14m-6-6 6 6-6 6"/></svg></span></button>
+      <a href="#salas-abertas" class="home-action"><span class="action-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3"/><path d="M3 19v-2a6 6 0 0 1 12 0v2H3zM17 5a3 3 0 0 1 0 6m1 3a5 5 0 0 1 3 5"/></svg></span><span class="action-copy"><strong>Salas ao vivo</strong><small>Estude com outros participantes</small></span><span class="action-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M5 12h14m-6-6 6 6-6 6"/></svg></span></a>
+      <button id="openCreatePanel" type="button" class="home-action hidden" aria-controls="createRoomPanel" aria-expanded="false"><span class="action-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="3" width="18" height="18" rx="4"/><path d="M12 7v10M7 12h10"/></svg></span><span class="action-copy"><strong>Criar sala</strong><small>Disponível para qualquer conta</small></span><span class="action-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M5 12h14m-6-6 6 6-6 6"/></svg></span></button>
     </section>
     <section id="createRoomPanel" class="home-create-panel hidden" aria-label="Criar sala">
-      <div class="create-title"><div><div class="eyebrow">PAINEL DO ADMINISTRADOR</div><h2>Criar sala de estudos</h2></div><button id="closeCreatePanel" class="btn btn-soft btn-small" type="button">Fechar</button></div>
+      <div class="create-title"><div><div class="eyebrow">CRIE SUA SALA</div><h2>Criar sala de estudos</h2></div><button id="closeCreatePanel" class="btn btn-soft btn-small" type="button">Fechar</button></div>
       <div class="landing-panels"><section id="adminCreateCard" class="panel landing-card hidden">
-        <p>Crie uma sala, importe questões ou carregue questões do banco.</p>
+        <p>Escolha a capacidade e a privacidade. As questões serão carregadas do banco.</p>
         <label for="roomName">Nome da sala</label><input id="roomName" placeholder="Ex.: Direito Penal • IGEDUC" maxlength="70" />
-        <label for="hostName">Seu nome</label><input id="hostName" placeholder="Ex.: Dom" maxlength="30" value="Administrador" />
-        <button id="createRoom" class="btn btn-primary btn-full">Criar sala <span>→</span></button>
+        <label for="hostName">Seu nome</label><input id="hostName" placeholder="Ex.: Dom" maxlength="30" value="" />
+        <label for="roomCapacity">Limite de pessoas (incluindo você)</label><input id="roomCapacity" type="number" min="2" max="20" value="2"><label for="roomAccess">Entrada</label><select id="roomAccess"><option value="open">Aberta para usuários com login</option><option value="password">Protegida por senha</option></select><label for="roomPassword">Senha da sala</label><input id="roomPassword" type="password" minlength="4" maxlength="100" disabled autocomplete="new-password"><p class="hint">Após 30 minutos sem atividade, a sala é encerrada automaticamente.</p><button id="createRoom" class="btn btn-primary btn-full">Criar sala <span>→</span></button>
       </section></div>
     </section>
-    <section class="landing-panels hidden"><section id="joinCard" class="panel landing-card hidden">
+    <section class="landing-panels"><section id="joinCard" class="panel landing-card hidden">
         <label for="joinName">Seu nome</label><input id="joinName" placeholder="Ex.: Rafael" maxlength="30" />
         <label for="joinCode">Código da sala</label><input id="joinCode" placeholder="Ex.: A7K3PL" maxlength="6" autocapitalize="characters" />
-        <button id="joinRoom" class="btn btn-outline btn-full">Entrar na sala</button>
+        <label for="joinPassword">Senha da sala (se houver)</label><input id="joinPassword" type="password" maxlength="100" autocomplete="off"><button id="joinRoom" class="btn btn-outline btn-full">Entrar na sala</button>
     </section></section>
     <section id="salas-abertas" class="panel room-directory" aria-label="Salas abertas">
-      <div class="directory-heading"><div><div class="eyebrow">SALAS DE ESTUDO</div><h2>Salas abertas</h2><p>Escolha uma sala para entrar. Cada sala aceita um participante além do administrador.</p></div>
+      <div class="directory-heading"><div><div class="eyebrow">SALAS DE ESTUDO</div><h2>Salas abertas</h2><p>Escolha uma sala para entrar. Cada dono define a capacidade e pode proteger a entrada com senha.</p></div>
         <button id="refreshRooms" class="btn btn-soft btn-small" type="button">Atualizar ↻</button></div>
       <div id="roomsNotice" class="directory-notice" role="status">Procurando salas...</div>
       <div id="roomsList" class="room-cards"></div>
@@ -77,9 +79,9 @@
     <aside class="sidebar panel" id="sidebar">
       <div class="sidebar-head"><div class="eyebrow">SALA DE ESTUDOS</div><h2 id="roomTitle">Sua sessão</h2><div id="memberStatus" class="member-status">Aguardando participante...</div></div>
       <div class="host-only" id="uploadArea">
-        <div id="dropZone" class="drop-zone" tabindex="0"><span class="upload-icon">⇧</span><strong>Importar questões</strong><span>Arraste seu arquivo JSON ou clique aqui</span><small>Enunciados e alternativas serão organizados automaticamente</small><input id="jsonFile" type="file" accept=".json,application/json" aria-label="Selecionar arquivo JSON"></div>
+        <div id="dropZone" class="drop-zone hidden" tabindex="0"><span class="upload-icon">⇧</span><strong>Importar questões</strong><span>Arraste seu arquivo JSON ou clique aqui</span><small>Enunciados e alternativas serão organizados automaticamente</small><input id="jsonFile" type="file" accept=".json,application/json" aria-label="Selecionar arquivo JSON"></div>
         <div class="room-bank-import">
-          <strong>Ou carregar do banco de questões</strong>
+          <strong>Escolher questões do banco</strong>
           <label for="bankRoomSubject">Disciplina</label><select id="bankRoomSubject"><option value="">Todas</option></select>
           <label for="bankRoomTopic">Assunto</label><select id="bankRoomTopic"><option value="">Todos</option></select>
           <label for="bankRoomLimit">Quantidade de questões</label><input type="number" id="bankRoomLimit" min="1" max="200" value="50">
@@ -94,9 +96,10 @@
     </aside>
 
     <section class="content">
-      <div class="session-head panel"><div><div class="eyebrow">TREINAMENTO AO VIVO</div><div class="session-subtitle" id="sessionSubtitle">Aguardando questões...</div></div><div class="session-score"><div><strong id="scoreHost">0</strong><small id="scoreHostName">Você</small></div><span>×</span><div><strong id="scoreGuest">0</strong><small id="scoreGuestName">Amigo</small></div></div></div>
+      <section class="panel room-voice" aria-label="Chamada de voz"><div><div class="eyebrow">ÁUDIO EM GRUPO</div><h2>Chamada de voz</h2></div><div class="voice-buttons"><button id="voiceJoin" class="btn btn-primary" type="button">Entrar na chamada</button><button id="voiceMute" class="btn btn-soft" type="button" disabled>Silenciar microfone</button><button id="voiceLeave" class="btn btn-outline" type="button" disabled>Sair da chamada</button><button id="voicePlay" class="btn btn-soft" type="button" hidden>Ouvir chamada</button></div><p id="voiceStatus" role="status">Áudio desligado. Entre na chamada para conversar.</p><audio id="voiceAudio" autoplay playsinline></audio></section>
+      <div class="session-head panel"><div><div class="eyebrow">TREINAMENTO AO VIVO</div><div class="session-subtitle" id="sessionSubtitle">Aguardando questões...</div></div><div class="session-score hidden"><div><strong id="scoreHost">0</strong><small id="scoreHostName">Você</small></div><span>×</span><div><strong id="scoreGuest">0</strong><small id="scoreGuestName">Amigo</small></div></div></div>
 
-      <section id="emptyState" class="panel empty-main"><div class="empty-symbol">◈</div><h2>Sua sala está pronta!</h2><p id="emptyDescription">Importe o JSON que você já captura do TEC e as questões aparecerão aqui organizadas.</p></section>
+      <section id="emptyState" class="panel empty-main"><div class="empty-symbol">◈</div><h2>Sua sala está pronta!</h2><p id="emptyDescription">Escolha as questões publicadas do banco para começar.</p></section>
 
       <section id="questionArea" class="panel question-area hidden">
         <div class="question-top"><div class="eyebrow" id="questionNumber">QUESTÃO 01</div><span id="questionType" class="pill">MÚLTIPLA ESCOLHA</span></div>
@@ -107,18 +110,17 @@
         <div id="incompleteNotice" class="notice warning hidden">A extração não trouxe alternativas suficientes. O criador da sala pode editar esta questão antes de responder.</div>
         <div id="feedback" class="feedback hidden"></div>
         <div class="host-only host-tools">
-          <div class="tool-line"><button id="editQuestion" class="btn btn-soft btn-small">Editar questão</button><a id="originalLink" href="#" target="_blank" rel="noopener noreferrer" class="source-link hidden">Abrir no TEC ↗</a></div>
-          <div class="answer-key"><label for="keySelect">Gabarito (opcional)</label><select id="keySelect"><option value="">Não informado no JSON</option></select><small>O gabarito não é inventado: você pode informar depois de conferir.</small></div>
-          <div class="nav-buttons"><button id="prevQuestion" class="btn btn-soft">← Anterior</button><button id="revealAnswers" class="btn btn-outline">Revelar respostas</button><button id="nextQuestion" class="btn btn-primary">Próxima →</button></div>
+          <div class="tool-line hidden"><button id="editQuestion" class="btn btn-soft btn-small">Editar questão</button><a id="originalLink" href="#" target="_blank" rel="noopener noreferrer" class="source-link hidden">Abrir no TEC ↗</a></div>
+          <div class="answer-key hidden"><label for="keySelect">Gabarito (opcional)</label><select id="keySelect"><option value="">Não informado no JSON</option></select><small>O gabarito não é inventado: você pode informar depois de conferir.</small></div>
+          <div class="nav-buttons"><button id="prevQuestion" class="btn btn-soft">← Anterior</button><button id="revealAnswers" class="btn btn-outline">Revelar escolhas</button><button id="nextQuestion" class="btn btn-primary">Próxima →</button></div>
         </div>
       </section>
     </section>
     <aside class="stats panel"><div class="eyebrow">RESPOSTAS DA EQUIPE</div><h2>Ao vivo</h2>
-      <div class="player-status"><span class="avatar">1</span><span><strong id="playerOneName">Você</strong><small id="playerOneState">Ainda não respondeu</small></span><span id="playerOneIcon" class="status-icon">○</span></div>
-      <div class="player-status"><span class="avatar alt">2</span><span><strong id="playerTwoName">Amigo</strong><small id="playerTwoState">Aguardando entrar</small></span><span id="playerTwoIcon" class="status-icon">○</span></div>
+      <div id="roomParticipants"></div>
       <div class="mini-divider"></div>
       <div class="stats-note" id="resultExplanation">Cada pessoa marca sua resposta sem ver a escolha da outra. Quando os dois responderem, as escolhas aparecem.</div>
-      <div class="stats-bottom"><div class="eyebrow">DESEMPENHO</div><div id="scoreDetail" class="tiny muted">A pontuação aparece quando houver gabarito e respostas reveladas.</div></div>
+      <div class="stats-bottom"><div class="eyebrow">INFORMAÇÕES DA SALA</div><div id="scoreDetail" class="tiny muted">A pontuação aparece quando houver gabarito e respostas reveladas.</div></div>
     </aside>
   </div>
 </main>

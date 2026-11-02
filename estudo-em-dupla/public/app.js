@@ -63,8 +63,8 @@ async function request(endpoint,method='GET',body){
 }
 function credentials(){return role==='host'?{hostToken:token}:{token};}
 function roomLink(){return location.origin+'/?room='+encodeURIComponent(code);}
-function setSession(c,t,r){if(!signedIn){showAuthMessage('Entre na conta antes de acessar a sala.',true);return;}code=c;token=t;role=r;localStorage.setItem('dupla_'+code,JSON.stringify({token,role}));localStorage.setItem('dupla_last_room',code);history.replaceState(null,'','/?room='+code);$('landing').classList.add('hidden');$('workspace').classList.remove('hidden');$('topRoom').classList.remove('hidden');$('roomQuickNav').classList.remove('hidden');$('roomCode').textContent=code;document.body.classList.toggle('guest',role==='guest');$('roomTitle').textContent=role==='host'?'Sala '+code:'Sala '+code;connect();refresh();}
-function connect(){if(es)es.close();es=new EventSource('/api/room/'+encodeURIComponent(code)+'/events?token='+encodeURIComponent(token));es.addEventListener('refresh',()=>refresh());es.onerror=()=>{};}
+function setSession(c,t,r){if(!signedIn){showAuthMessage('Entre na conta antes de acessar a sala.',true);return;}code=c;token=t;role=r;localStorage.setItem('dupla_'+code,JSON.stringify({token,role}));localStorage.setItem('dupla_last_room',code);history.replaceState(null,'','/?room='+code);$('landing').classList.add('hidden');$('workspace').classList.remove('hidden');$('topRoom').classList.remove('hidden');$('roomQuickNav').classList.remove('hidden');$('roomCode').textContent=code;document.body.classList.toggle('guest',role==='guest');$('roomTitle').textContent=role==='host'?'Sala '+code:'Sala '+code;window.roomVoice?.setup({role:r,send:signal=>request('/voice','POST',{...credentials(),signal}),config:()=>request('/voice-config?token='+encodeURIComponent(token))});connect();refresh();}
+function connect(){if(es)es.close();es=new EventSource('/api/room/'+encodeURIComponent(code)+'/events?token='+encodeURIComponent(token));es.addEventListener('refresh',()=>refresh());es.addEventListener('voice',event=>{try{window.roomVoice?.receive(JSON.parse(event.data));}catch{}});es.onerror=()=>{};}
 let ongoing=null,refreshQueued=false;
 async function refresh(){
   if(ongoing){refreshQueued=true;return ongoing;}
@@ -72,11 +72,11 @@ async function refresh(){
   return ongoing;
 }
 async function command(action,data={}){try{await request('/'+action,'POST',{...credentials(),...data});await refresh();}catch(e){alertUser(e.message,true);}}
-async function createRoom(){if(!signedIn||!isAdminAccount)return;try{
-  const name=$('hostName').value.trim()||'Administrador';
+async function createRoom(){if(!signedIn)return;try{
+  const name=$('hostName').value.trim()||'Participante';
   const title=$('roomName').value.trim();
   let r;
-  try{r=await fetch('/api/room',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,title})});}
+  try{r=await fetch('/api/room',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,title,maxParticipants:Number($('roomCapacity').value),access:$('roomAccess').value,password:$('roomPassword').value})});}
   catch(e){throw networkError(e);}
   if(!(r.headers.get('content-type')||'').includes('application/json'))throw Error('Não foi possível criar a sala: o site foi aberto sem o servidor Node.js. '+connectionHint());
   const v=await r.json();if(!r.ok)throw Error(v.error||'Erro ao criar sala.');
@@ -88,9 +88,9 @@ async function joinRoom(){if(!signedIn)return;try{
   const previousCode=code;
   code=c;
   let v;
-  try{v=await request('/join','POST',{name:$('joinName').value.trim()||'Amigo'});}
+  try{v=await request('/join','POST',{name:$('joinName').value.trim()||'Participante',password:$('joinPassword').value});}
   catch(e){code=previousCode;throw e;}
-  setSession(c,v.token,'guest');alertUser('Você entrou na sala!');
+  setSession(c,v.token,v.role||'guest');alertUser('Você entrou na sala!');
 }catch(e){alertUser(e.message,true);}}
 function clean(t){return String(t||'').replace(/\u00a0/g,' ').replace(/[\t ]+/g,' ').replace(/\n[ \t]*\n[ \t]*\n+/g,'\n\n').trim();}
 function htmlDoc(html){return new DOMParser().parseFromString(html||'','text/html');}
@@ -191,22 +191,16 @@ function renderRoomCommentary(value){
 function render(q){
   if(q.isOpen===false){leaveRoom('Esta sala foi encerrada pelo administrador.');return;}
   $('questionTotal').textContent=q.questionsCount;
-  $('memberStatus').textContent=q.guestName?`${q.hostName} e ${q.guestName} conectados`:'Aguardando seu amigo entrar...';
-  $('scoreHost').textContent=q.scores.host;$('scoreGuest').textContent=q.scores.guest;
-  $('scoreHostName').textContent=q.hostName;$('scoreGuestName').textContent=q.guestName||'Amigo';
-  $('playerOneName').textContent=q.hostName;$('playerTwoName').textContent=q.guestName||'Amigo';
-  $('sessionSubtitle').textContent=q.questionsCount?`${q.questionsCount} questão(ões) importada(s) • questão ${q.index+1} de ${q.questionsCount}`:'Importe seu arquivo JSON para começar';
-  $('scoreDetail').textContent=q.scores.count?`${q.scores.count} questão(ões) corrigida(s) com gabarito disponível.`:'A pontuação aparece quando houver gabarito e respostas reveladas.';
-  const one=q.revealed?(q.answers.host?'Resposta: '+q.answers.host:'Não respondeu'):(q.answered.host?'Resposta registrada':'Ainda não respondeu');
-  const two=q.guestName?(q.revealed?(q.answers.guest?'Resposta: '+q.answers.guest:'Não respondeu'):(q.answered.guest?'Resposta registrada':'Ainda não respondeu')):'Aguardando entrar';
-  $('playerOneState').textContent=one;$('playerTwoState').textContent=two;
-  $('playerOneIcon').textContent=q.answered.host?'✓':'○';$('playerOneIcon').className='status-icon'+(q.answered.host?' ok':'');
-  $('playerTwoIcon').textContent=q.answered.guest?'✓':'○';$('playerTwoIcon').className='status-icon'+(q.answered.guest?' ok':'');
-  $('resultExplanation').textContent=q.revealed?'Respostas reveladas para os dois participantes. Confira o gabarito, quando houver.':'Responda sem ver a alternativa do outro. As respostas são reveladas quando os dois marcarem ou o anfitrião liberar.';
+  $('memberStatus').textContent=`${q.participants.length}/${q.maxParticipants} participantes`;
+  $('sessionSubtitle').textContent=q.questionsCount?`${q.questionsCount} questões do banco • questão ${q.index+1}`:'Escolha questões publicadas no banco para começar';
+  $('scoreDetail').textContent='Gabaritos e comentários não são exibidos nas salas.';
+  $('resultExplanation').textContent=q.revealed?'Respostas dos participantes reveladas. O gabarito permanece oculto.':'As respostas ficam ocultas até todos responderem ou o dono revelar as escolhas.';
+  const roster=$('roomParticipants');roster.replaceChildren();
+  for(const person of q.participants){const line=document.createElement('div');line.className='player-status';const photo=document.createElement('img');photo.className='room-profile-photo';if(/^data:image\/(webp|png|jpeg);base64,/.test(person.avatar||'')){photo.src=person.avatar;photo.alt=person.name;line.append(photo);}else{const initial=document.createElement('span');initial.className='avatar room-profile-photo';initial.textContent=person.name.slice(0,1).toUpperCase();line.append(initial);}const label=document.createElement('a');label.href='/comunidade#perfil='+encodeURIComponent(person.userId);label.textContent=person.name+(person.owner?' (dono)':'');const info=document.createElement('small');info.textContent=q.revealed?(person.answer?'Resposta: '+person.answer:'Não respondeu'):(person.answered?'✓ Respondeu':'Aguardando resposta');line.append(label,info);roster.append(line);}
   if(role==='host')renderList(q);
   $('emptyState').classList.toggle('hidden',!!q.question);
   $('questionArea').classList.toggle('hidden',!q.question);
-  if(!q.question){$('emptyDescription').textContent=q.role==='host'?'Importe o JSON que você já captura do TEC e as questões aparecerão aqui organizadas.':'Seu amigo ainda não importou o arquivo. A questão aparecerá automaticamente aqui.';return;}
+  if(!q.question){$('emptyDescription').textContent=q.role==='host'?'Selecione disciplina e tópico para carregar questões publicadas do banco.':'Aguardando o dono escolher as questões do banco.';return;}
   const data=q.question;
   $('questionNumber').textContent='QUESTÃO '+String(q.index+1).padStart(2,'0')+' DE '+q.questionsCount;
   $('questionType').textContent=data.type==='true_false'?'CERTO OU ERRADO':'MÚLTIPLA ESCOLHA';
@@ -219,29 +213,18 @@ function render(q){
     if(selected)b.classList.add('selected');
     if(q.revealed&&data.correct){if(opt.letter===data.correct)b.classList.add('correct');else if(selected)b.classList.add('wrong');}
     b.append(div('letter',opt.letter),div('answer-label',opt.text));
-    b.disabled=q.revealed;enableElimination(b,()=>command('answer',{choice:opt.letter,index:q.index}),`${code}:${role}:${q.index}:${data.id||data.statement}`,opt.letter);parent.append(b);
+    b.disabled=q.revealed||!!q.myAnswer;enableElimination(b,()=>command('answer',{choice:opt.letter,index:q.index}),`${code}:${role}:${q.index}:${data.id||data.statement}`,opt.letter);parent.append(b);
   }
   $('incompleteNotice').classList.toggle('hidden',!data.needsReview);
   $('feedback').classList.toggle('hidden',!q.revealed);
   if(q.revealed){
-    const a=q.answers;
-    let t=`${q.hostName}: ${a.host||'não respondeu'} • ${q.guestName||'Amigo'}: ${a.guest||'não respondeu'}`;
-    if(data.correct)t+='\nGabarito: '+data.correct;
-    else t+='\nGabarito não informado. Compare as respostas e confira a questão original.';
     const box=$('feedback');box.replaceChildren();
-    const resultText=document.createElement('div');resultText.className='room-answer-summary';resultText.textContent=t;box.append(resultText);
-    if(data.commentary && String(data.commentary).trim())box.append(renderRoomCommentary(data.commentary));
-    else {const missing=document.createElement('p');missing.className='room-no-comment';missing.textContent='Esta questão ainda não possui comentário explicativo.';box.append(missing);}
+    for(const person of q.participants){const line=document.createElement('div');line.textContent=person.name+': '+(person.answer||'não respondeu');box.append(line);}
   }
   if(role==='host'){
     $('prevQuestion').disabled=q.index===0;$('nextQuestion').disabled=q.index>=q.questionsCount-1;
     $('revealAnswers').disabled=q.revealed;
-    const select=$('keySelect');select.replaceChildren(new Option('Não informado no JSON',''));
-    for(const o of data.alternatives)select.add(new Option(`${o.letter} — ${o.text.slice(0,80)}`,o.letter));
-    // A chave só é enviada ao cliente depois da revelação; seleção local preservada até lá.
-    select.value=q.hostCorrect||'';
-    const link=$('originalLink');link.classList.toggle('hidden',!data.link);
-    if(data.link)link.href=data.link;
+
   }
 }
 function renderList(q){
@@ -264,7 +247,7 @@ function populateRoomBankTopics(){
   for(const item of [...new Set(roomBankPairs.filter(x=>!sub||x.subject===sub).map(x=>x.topic))].sort())select.add(new Option(item,item));
 }
 async function loadRoomBankFilters(){
-  if(!isAdminAccount)return;
+  if(!signedIn)return;
   try{
     const r=await fetch('/api/bank/facets',{cache:'no-store'});
     const data=await r.json();if(!r.ok)return;
@@ -308,6 +291,8 @@ async function saveEdit(e){e.preventDefault();
 }
 
 function leaveRoom(message=''){
+  window.roomVoice?.stop();
+  if(code&&token)request('/leave','POST',credentials()).catch(()=>{});
   if(es){es.close();es=null;}
   if(code){localStorage.removeItem('dupla_'+code);}
   localStorage.removeItem('dupla_last_room');
@@ -326,11 +311,10 @@ function roomCard(room){
   meta.textContent=`Código ${room.code} • ${room.hostName} • ${room.questionsCount} questão(ões)`;
   info.append(title,meta);
   const status=document.createElement('span');status.className='room-status '+(room.occupied?'busy':'free');
-  status.textContent=room.occupied?'Ocupada':'1 vaga disponível';
+  status.textContent=`${room.participants}/${room.maxParticipants} pessoas • ${room.hasPassword?'Com senha':'Aberta'}`;
   const action=document.createElement('button');action.type='button';action.className='btn btn-small '+(room.mine?'btn-soft':'btn-primary');
   action.textContent=room.mine?'Continuar':room.occupied?'Lotada':'Entrar';
-  action.disabled=room.occupied&&!room.mine || (isAdminAccount&&!room.mine);
-  if(isAdminAccount&&!room.mine)action.textContent='Somente o criador';
+  action.disabled=room.occupied&&!room.mine;
   action.onclick=async()=>{
     if(action.disabled)return;
     action.disabled=true;
@@ -340,7 +324,8 @@ function roomCard(room){
         const data=await result.json();if(!result.ok)throw Error(data.error||'Não foi possível abrir esta sala.');
         setSession(data.code,data.token,data.role);
       }else{
-        $('joinCode').value=room.code;
+        $('joinCode').value=room.code;$('joinPassword').value='';
+        if(room.hasPassword){const password=prompt('Digite a senha da sala:');if(password===null)return;$('joinPassword').value=password;}
         await joinRoom();
       }
     }catch(e){alertUser(e.message,true);}
@@ -358,7 +343,7 @@ async function loadRooms(){
     const data=await r.json();if(!r.ok)throw Error(data.error||'Não foi possível carregar salas.');
     const list=$('roomsList');list.replaceChildren();
     for(const room of data.rooms)list.append(roomCard(room));
-    notice.textContent=data.rooms.length?'':isAdminAccount?'Nenhuma sala aberta. Crie sua primeira sala acima.':'Nenhuma sala aberta no momento. Quando o administrador criar uma sala, ela aparecerá aqui.';
+    notice.textContent=data.rooms.length?'':isAdminAccount?'Nenhuma sala aberta. Crie sua primeira sala acima.':'Nenhuma sala aberta. Crie uma sala para estudar em grupo.';
     notice.classList.toggle('hidden',Boolean(data.rooms.length));
   }catch(e){notice.textContent='Falha ao carregar as salas. Clique em Atualizar. '+e.message;notice.classList.remove('hidden');}
   finally{roomsLoading=false;}
@@ -466,10 +451,10 @@ async function verifyLogin(){
   if(!result.authenticated)throw Error('Não foi possível confirmar seu login.');
   signedIn=true;isAdminAccount=Boolean(result.isAdmin);
   $('authGate').classList.add('hidden');$('landing').classList.remove('hidden');
-  $('adminCreateCard').classList.toggle('hidden',!isAdminAccount);$('openCreatePanel').classList.toggle('hidden',!isAdminAccount);
-  if(isAdminAccount)loadRoomBankFilters();
-  $('joinCard').classList.toggle('hidden',isAdminAccount);
-  $('landingDescription').textContent=isAdminAccount?'Crie salas, importe questões e acompanhe as respostas em tempo real.':'Escolha uma sala aberta e responda às questões com o administrador.';
+  $('adminCreateCard').classList.remove('hidden');$('openCreatePanel').classList.remove('hidden');
+  loadRoomBankFilters();
+  $('joinCard').classList.remove('hidden');
+  $('landingDescription').textContent='Crie sua sala ou entre em uma sala aberta para estudar com outras pessoas.';
   $('bankNavLink').classList.remove('hidden');
   $('accountBar').classList.remove('hidden');$('accountEmail').textContent=(isAdminAccount?'ADMIN • ':'')+(result.user.email||'Minha conta');
   $('authPassword').value='';
@@ -480,6 +465,9 @@ async function boot(){
   $('tabRegister').addEventListener('click',()=>switchAuthMode('register'));
   $('authForm').addEventListener('submit',onAuthSubmit);
   $('logout').addEventListener('click',async()=>{
+    window.roomVoice?.stop();
+    if(code&&token)try{await request('/leave','POST',credentials());}catch{}
+    try{await fetch('/api/community/offline',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});}catch{}
     try {await authFetch('logout','POST',{});}catch(e){alertUser(e.message,true);return;}
     if(es)es.close();
     code=null;token=null;role=null;view=null;signedIn=false;isAdminAccount=false;
@@ -504,3 +492,7 @@ boot();
 document.getElementById('openCreatePanel').addEventListener('click',()=>{const p=document.getElementById('createRoomPanel');p.classList.remove('hidden');document.getElementById('openCreatePanel').setAttribute('aria-expanded','true');p.scrollIntoView({behavior:'smooth',block:'center'});});
 document.getElementById('closeCreatePanel').addEventListener('click',()=>{document.getElementById('createRoomPanel').classList.add('hidden');document.getElementById('openCreatePanel').setAttribute('aria-expanded','false');});
 if(new URLSearchParams(location.search).get('action')==='criar'){window.addEventListener('load',()=>{let tries=0;const t=setInterval(()=>{const b=document.getElementById('openCreatePanel');if(b&&!b.classList.contains('hidden')){clearInterval(t);b.click();}if(++tries>35)clearInterval(t);},250);});}
+
+$('roomAccess').onchange=()=>{$('roomPassword').disabled=$('roomAccess').value!=='password';$('roomPassword').required=$('roomAccess').value==='password';};
+let lastRoomActivity=0;
+for(const name of ['pointerdown','keydown','touchstart'])document.addEventListener(name,()=>{if(!code||!token||Date.now()-lastRoomActivity<60000)return;lastRoomActivity=Date.now();request('/activity','POST',credentials()).catch(()=>{});},{passive:true});

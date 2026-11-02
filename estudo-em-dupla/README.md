@@ -48,7 +48,7 @@ Após publicar, aguarde o serviço ficar disponível e atualize o navegador. `/a
 - **Estatísticas:** filtre por matéria, tópico, banca e período das respostas. Acertos e erros consideram a última resposta de cada questão dentro do período, no horário de Brasília.
 - **Administrador:** em Gerenciar questões, importe JSON, crie e edite questões, renomeie tópicos e exclua seleções. Questões sem gabarito ficam como rascunho.
 - **Renomear tópico:** selecione a disciplina, o tópico atual e o novo nome. Para reunir tópicos, use o mesmo novo nome em cada um. As respostas são preservadas.
-- **Salas:** o administrador cria e controla a sala; outra conta entra como convidada. É possível importar JSON ou carregar questões publicadas no banco.
+- **Salas:** qualquer conta autenticada pode criar, definir capacidade e senha opcional. As questões são selecionadas do banco; importação por JSON e acesso ao gabarito não estão disponíveis na sala.
 - **Alternativas:** dois cliques rápidos riscam ou desriscam uma alternativa. A marcação é temporária no navegador.
 
 Importe somente questões próprias ou com autorização de disponibilização. `exemplo_questoes_autorais.json` serve para testar o formato. `PROMPTQUESTÕES.txt` é um material auxiliar para preparar questões; não é utilizado pelo servidor.
@@ -109,3 +109,40 @@ Execute TEORIA_SQL.sql atualizado para criar policial_contests e adicionar conte
 ### Compartilhar aulas entre concursos
 
 Execute TEORIA_SQL.sql atualizado e publique theory-api.js e os arquivos theory.html, theory.js e theory.css de public. No editor, marque todos os concursos em Concursos desta aula. A aula permanece com um único registro; aparece nas disciplinas e tópicos de cada concurso marcado, e qualquer edição atualiza o mesmo conteúdo em todos eles. Os vínculos antigos são preservados pela migração. Sem concursos marcados, fica em Conteúdo geral. Os grifos continuam associados à mesma aula e à conta do usuário.
+
+
+### Chamada de voz nas salas
+
+Publique server.js, public/index.html, public/app.js, public/room-voice.js e public/styles.css atualizados. Cada participante entra na mesma sala, clica em Entrar na chamada e autoriza o microfone. Pode silenciar e sair da chamada sem sair da sala. Sair da sala ou fechar a página interrompe a captura do microfone. A voz usa WebRTC entre os dois participantes, sem gravação no banco. A negociação passa pelo servidor da sala e exige autenticação e credenciais da sala.
+
+O site deve ser aberto por HTTPS (ou localhost para desenvolvimento). O servidor STUN padrão auxilia a conexão direta. Algumas redes bloqueiam conexões diretas; para suportá-las, configure VOICE_ICE_SERVERS no ambiente do servidor com um array JSON de servidores ICE, incluindo TURN com credenciais válidas. Exemplo de formato: [{"urls":"stun:seu-servidor:3478"},{"urls":"turn:seu-servidor:3478","username":"usuario","credential":"senha"}]. Credenciais ICE são entregues somente aos participantes autenticados; use credenciais TURN com prazo limitado quando disponíveis. Não é necessário SQL para ativar a chamada. Valide o áudio com duas contas em dispositivos e redes diferentes após publicar.
+
+
+## Salas em grupo — regras atuais
+
+- Qualquer conta com login pode criar uma sala e participar das salas de outras contas.
+- O criador define a capacidade de 2 a 20 pessoas, contando com ele, e escolhe entrada aberta ou protegida por senha (4 a 100 caracteres). A senha é armazenada como hash com salt; o login continua obrigatório.
+- Cada sala carrega somente questões publicadas no banco. Não aceita importação JSON, edição de questões ou edição/consulta de gabarito. Nenhum participante, nem o dono, recebe gabarito ou comentário da questão pela API da sala. O banco individual mantém suas regras próprias.
+- O dono escolhe questões, navega e pode revelar as escolhas dos participantes. Quando todos respondem, as escolhas também são reveladas. Isso não revela o gabarito.
+- A sala encerra após 30 minutos sem atividade de nenhum participante. Entrar, responder, navegar, escolher questões e interagir na página atualiza a atividade. Consultas automáticas de estado e a conexão aberta não impedem a expiração. A verificação periódica ocorre a cada 30 segundos, e os acessos também verificam o prazo.
+- Quem sai libera a vaga, exceto o dono, que mantém a propriedade da sala. O encerramento é persistido no Supabase; a sala sai do catálogo. Salas antigas são adaptadas ao serem acessadas.
+- A chamada de voz usa uma conexão WebRTC para cada par de participantes. Redes que bloqueiam conexão direta podem exigir configurar TURN. Teste o áudio em dispositivos reais depois da publicação.
+
+Para publicar esta versão, envie `server.js`, o novo `rooms-api.js`, `topic.js` e a pasta `public` atualizada. Não exige novo SQL: as configurações e participantes são guardados no estado JSON da tabela de salas existente. As mudanças nas salas não alteram as permissões de administração do banco e das aulas.
+
+Verificação automatizada das regras: `node --test tests/rooms-api.test.cjs`.
+
+
+## Comunidade, perfis e conquistas
+
+Antes de publicar, execute `COMUNIDADE_SQL.sql` no Supabase SQL Editor (é separado dos scripts de teoria). O script cria perfis, amizades, convites, respostas elegíveis e troféus, com acesso somente pelo servidor. Publique `server.js`, `rooms-api.js`, o novo `community-api.js` e a pasta `public` completa, incluindo community.html, community.js, community.css e presence.js.
+
+Acesse **Comunidade e perfil** na Home ou na barra lateral. Em **Meu perfil**, escolha o nome público, a biografia e uma foto do celular/computador. O navegador recorta a foto em quadrado e reduz para 256 pixels antes do envio; ela é salva no Supabase e aparece também ao lado do nome na sala. Perfis novos começam com um nome genérico até a pessoa editar. O e-mail de autenticação não é retornado pelos perfis públicos.
+
+A aba Pessoas lista usuários com perfil, com busca pelo nome e filtro online. A presença é renovada a cada 45 segundos nas abas visíveis; sem renovação por 90 segundos o usuário deixa de constar como online. O visto por último usa a última presença visível. O modo invisível esconde tanto online quanto visto por último de outras pessoas, sem esconder a biografia ou os troféus.
+
+Amizades exigem solicitação e aceitação. É possível cancelar, recusar e desfazer amizade. Convites podem ser enviados a outras pessoas para salas abertas em que o remetente participa. Expiram em 30 minutos, não ignoram senha ou capacidade e podem ser dispensados. Solicitações e convites aparecem na Comunidade e são indicados no botão da navegação. Abrir o perfil de outra pessoa mostra nome, foto, biografia e conquistas; na sala, clique no nome do participante para abrir o perfil.
+
+Troféus iniciais: primeira questão, 100 questões, 1.000 questões, 10 acertos seguidos e 20 acertos seguidos em salas. A contagem começa após ativar esta atualização; não reconstrói respostas antigas. A mesma questão na mesma sala conta uma vez, considerando a primeira resposta. Questões em salas diferentes contam como novas participações. A verificação é feita no servidor, usando o gabarito interno, sem enviar a resposta correta ao navegador. Uma função transacional no banco impede contagens duplicadas e mantém as sequências entre salas. Sem gabarito interno, a questão não gera conquista. Os totais são de todas as salas, não de uma única sala.
+
+Verificação das regras de salas e comunidade: `node --test tests/rooms-api.test.cjs tests/community-api.test.cjs`.

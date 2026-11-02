@@ -80,3 +80,11 @@ body{background:radial-gradient(ellipse 55% 35% at 53% 0%,rgba(59,120,102,.12),t
 .side-brand{color:#a2efb5}
 .btn-primary{background:#a2efb5;color:#0d1c16;box-shadow:0 3px 14px #0002}
 @media(max-width:720px){.topbar .brand-secondary{display:inline}.brand{font-size:10px;letter-spacing:.3px}}
+
+.room-voice{padding:18px 22px;margin-bottom:16px}.room-voice h2{font-size:18px;margin:8px 0 14px}.voice-buttons{display:flex;flex-wrap:wrap;gap:8px}.voice-buttons .btn{font-size:12px}.room-voice p{font-size:12px;line-height:1.6;color:#a9bfd0;margin:14px 0 0}.voice-buttons [hidden]{display:none!important}
+
+#roomParticipants .player-status{display:flex;flex-direction:column;align-items:start;gap:5px;border-bottom:1px solid #2c3b4e;padding-bottom:12px}.room-bank-import{margin-top:0}
+
+.room-profile-photo{width:42px;height:42px;border-radius:50%;object-fit:cover;border:2px solid #9addad}#roomParticipants a{font-size:12px;font-weight:750;color:#d7ebdf;text-decoration:none}#roomParticipants a:hover{text-decoration:underline}
+
+#roomParticipants .player-status{display:grid;grid-template-columns:42px minmax(0,1fr);column-gap:10px;align-items:center}#roomParticipants .room-profile-photo{grid-column:1;grid-row:1/3}#roomParticipants a,#roomParticipants small{grid-column:2;overflow-wrap:anywhere}

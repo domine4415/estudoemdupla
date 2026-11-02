@@ -1,0 +1,33 @@
+const test=require('node:test');
+const assert=require('node:assert/strict');
+const create=require('../rooms-api');
+function fixture(overrides={}){
+ const rooms=new Map(),saved=new Map();
+ const api=create({rooms,storageEnabled:true,parseJson:async req=>req.body,send:(res,status,data)=>Object.assign(res,{status,data}),err:(res,status,error)=>Object.assign(res,{status,data:{error}}),normalizeQuestion:q=>q,databaseRequest:async(endpoint,options)=>{
+  if(options){const body=JSON.parse(options.body);saved.set(body.code,body.state);return {};}
+  if(endpoint.startsWith('dupla_bank_questions'))return {json:async()=>[{data:{id:'q1',statement:'Pergunta',alternatives:[{letter:'A',text:'Opção A'},{letter:'B',text:'Opção B'}],correct:'A',commentary:'Explicação com resposta'}}]};
+  const p=new URL('http://local/'+endpoint).searchParams;
+  if(p.has('code'))return {json:async()=>saved.has(p.get('code').slice(3))?[{state:saved.get(p.get('code').slice(3))}]:[]};
+  return {json:async()=>[...saved].map(([code,state])=>({code,state}))};
+ },...overrides});
+ async function call(path,user='owner',body,method=body?'POST':'GET'){const res={};await api.handle({method,body},res,new URL('http://local/api/'+path),{id:user});return res;}
+ return {rooms,saved,api,call};
+}
+test('qualquer conta cria, protege com senha, define capacidade e mantém gabarito fora da sala',async()=>{
+ const {call,rooms}=fixture();const created=await call('room','owner',{name:'Dono',maxParticipants:3,access:'password',password:'1234'});assert.equal(created.status,201);const code=created.data.code;assert.match(code,/^[A-Z0-9]{6}$/);assert.notEqual(rooms.get(code).passwordHash,'1234');
+ assert.equal((await call(`room/${code}/join`,'p1',{password:'errada'})).status,403);
+ const joins=await Promise.all(['p1','p2','p3'].map(id=>call(`room/${code}/join`,id,{name:id,password:'1234'})));assert.equal(joins.filter(r=>r.status===200).length,2);assert.equal(joins.filter(r=>r.status===409).length,1);
+ assert.equal((await call(`room/${code}/from-bank`,'owner',{})).status,200);
+ for(const who of ['owner','p1','p2']){const result=await call(`room/${code}/state`,who);assert.equal(result.data.question.correct,undefined);assert.equal(result.data.question.commentary,undefined);assert.equal(result.data.participants.length,3);if(who==='owner')assert.equal(result.data.questions[0].correct,undefined);}
+ for(const action of ['key','edit','import'])assert.equal((await call(`room/${code}/${action}`,'owner',{questions:[]})).status,403);
+ assert.equal((await call(`room/${code}/navigate`,'p1',{index:0})).status,403);
+ await call(`room/${code}/answer`,'owner',{index:0,choice:'A'});await call(`room/${code}/answer`,'p1',{index:0,choice:'B'});assert.equal((await call(`room/${code}/state`,'owner')).data.revealed,false);await call(`room/${code}/answer`,'p2',{index:0,choice:'A'});const state=(await call(`room/${code}/state`,'owner')).data;assert.equal(state.revealed,true);assert.equal(state.question.correct,undefined);assert.equal(state.question.commentary,undefined);
+ await call(`room/${code}/leave`,'p1',{});assert.equal((await call(`room/${code}/join`,'p3',{password:'1234'})).status,200);
+});
+test('inatividade encerra a sala e persiste o encerramento',async()=>{
+ const {call,rooms,saved,api}=fixture();const created=await call('room','owner',{maxParticipants:4,access:'open'});const code=created.data.code;rooms.get(code).lastActivity=Date.now()-31*60*1000;await api.sweep();assert.equal(saved.get(code).isOpen,false);assert.equal((await call(`room/${code}/join`,'p1',{})).status,409);assert.equal((await call('rooms','p1')).data.rooms.length,0);
+});
+
+test('troféus usam a primeira resposta conferida no servidor, sem duplicar envios',async()=>{
+ const awards=[];const {call}=fixture({recordAnswer:async(...args)=>awards.push(args)});const created=await call('room','owner',{maxParticipants:3});const code=created.data.code;await call(`room/${code}/from-bank`,'owner',{});await call(`room/${code}/answer`,'owner',{index:0,choice:'B',correct:true});assert.equal(awards.length,1);assert.equal(awards[0][3],false);assert.equal((await call(`room/${code}/answer`,'owner',{index:0,choice:'A'})).status,409);assert.equal(awards.length,1);
+});

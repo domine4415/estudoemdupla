@@ -340,133 +340,20 @@ function requireHost(r,body,res,role,user) {
   if(!isAdmin(user)||role!=='host'||body.hostToken!==r.hostToken) {err(res,403,'Somente o criador da sala pode fazer isso.');return false;}
   return true;
 }
-async function handleApi(req,res,url,user) {
-  const segments=url.pathname.split('/').filter(Boolean);
-  if(segments[1]==='rooms'&&segments.length===2&&req.method==='GET') {
-    send(res,200,{rooms:await listRooms(user)});return;
-  }
-  if(segments[1]==='room' && segments.length===2 && req.method==='POST') {
-    if(!isAdmin(user)){err(res,403,'Somente o administrador pode criar salas.');return;}
-    const body=await parseJson(req);
-    const code=makeCode(), hostToken=id();
-    const room={code,hostToken,hostUserId:user.id,hostName:safeText(body.name,30)||'Administrador',
-      title:safeText(body.title,70),isOpen:true,guest:null,questions:[],index:0,votes:{},clients:new Set(),touched:Date.now()};
-    await persistRoom(room);
-    rooms.set(code,room); send(res,201,{code,token:hostToken}); return;
-  }
-  if(segments[1]!=='room'||!segments[2]) {err(res,404,'Rota não encontrada');return;}
-  const room=await findRoom(segments[2].toUpperCase(),res); if(!room) return;
-  const action=segments[3]||'';
-  if(action==='restore' && req.method==='GET') {
-    const access=auth(room,null,user.id);
-    if (!access) {err(res,403,'Você não é participante dessa sala.');return;}
-    send(res,200,{code:room.code,role:access,token:access==='host'?room.hostToken:room.guest.token});return;
-  }
-  if(action==='events' && req.method==='GET') {
-    const role=auth(room,url.searchParams.get('token'),user.id);
-    if(!role) {err(res,401,'Token inválido');return;}
-    res.writeHead(200,{'Content-Type':'text/event-stream; charset=utf-8','Cache-Control':'no-cache, no-transform','Connection':'keep-alive','X-Accel-Buffering':'no'});
-    res.write('event: refresh\ndata: {}\n\n');room.clients.add(res);
-    const heartbeat=setInterval(()=>{try{res.write(': heartbeat\n\n')}catch{}},20000);
-    req.on('close',()=>{clearInterval(heartbeat);room.clients.delete(res)});return;
-  }
-  if(action==='state'&&req.method==='GET') {
-    const role=auth(room,url.searchParams.get('token'),user.id);
-    if(!role) {err(res,401,'Você precisa entrar na sala.');return;}
-    send(res,200,sanitizedState(room,role));return;
-  }
-  if(action==='join'&&req.method==='POST') {
-    const body=await parseJson(req);
-    if(room.isOpen===false){err(res,409,'Esta sala foi encerrada pelo administrador.');return;}
-    if(room.hostUserId===user.id) {err(res,409,'Você já é o criador desta sala.');return;}
-    if(room.guest) {
-      if(room.guest.userId===user.id) {send(res,200,{code:room.code,token:room.guest.token});return;}
-      err(res,409,'Esta sala já tem dois participantes.');return;
-    }
-    const token=id(); room.guest={name:safeText(body.name,30)||'Amigo',token,userId:user.id};
-    await persistRoom(room);
-    send(res,200,{code:room.code,token});notify(room);return;
-  }
-  const body=await parseJson(req);
-  const role=auth(room,body.token||body.hostToken,user.id);
-  if(!role) {err(res,401,'Credencial inválida.');return;}
-  if(action==='close'&&req.method==='POST') {
-    if(!requireHost(room,body,res,role,user))return;
-    room.isOpen=false;
-    await persistRoom(room);notify(room);send(res,200,{ok:true});return;
-  }
-  if(room.isOpen===false){err(res,409,'Esta sala foi encerrada.');return;}
-  if(action==='import'&&req.method==='POST') {
-    if(!requireHost(room,body,res,role,user))return;
-    if(!Array.isArray(body.questions)||body.questions.length===0||body.questions.length>MAX_QUESTIONS) {err(res,400,`Envie entre 1 e ${MAX_QUESTIONS} questões.`);return;}
-    const cleaned=body.questions.map(normalizeQuestion);
-    if(cleaned.some(x=>!x)) {err(res,400,'Há questão sem enunciado.');return;}
-    room.questions=cleaned;room.index=0;room.votes={};
-    await persistRoom(room);notify(room);
-    send(res,200,{imported:cleaned.length});return;
-  }
-  if(action==='from-bank'&&req.method==='POST') {
-    if(!requireHost(room,body,res,role,user))return;
-    if(!storageEnabled){err(res,503,'Configure o Supabase para carregar questões do banco.');return;}
-    const amount=Math.min(200,Math.max(1,Number.parseInt(body.limit,10)||50));
-    const p=new URLSearchParams({select:'data',published:'eq.true',order:'created_at.desc',limit:String(amount)});
-    const selectedSubject=safeText(body.subject,180),selectedTopic=safeText(body.topic,180);
-    if(selectedSubject)p.set('subject','eq.'+selectedSubject);
-    if(selectedTopic)p.set('topic',topicFilter(selectedTopic));
-    const rows=await (await databaseRequest('dupla_bank_questions?'+p)).json();
-    if(!rows.length){err(res,404,'Não existem questões publicadas com esses filtros.');return;}
-    const normalized=rows.map((r,i)=>normalizeQuestion({...r.data,topic:normalizeTopic(r.data?.topic)},i)).filter(Boolean);
-    room.questions=normalized;room.index=0;room.votes={};
-    await persistRoom(room);notify(room);
-    send(res,200,{imported:normalized.length});return;
-  }
-  if(action==='answer'&&req.method==='POST') {
-    const q=room.questions[room.index];
-    if(!q) {err(res,400,'A sala ainda não possui questões.');return;}
-    if(body.index!==room.index) {err(res,409,'A questão mudou. Atualize a tela.');return;}
-    if(!q.alternatives.some(a=>a.letter===body.choice)) {err(res,400,'Alternativa inválida.');return;}
-    const vote=room.votes[room.index] ||= {host:null,guest:null,revealed:false};
-    if(vote.revealed) {err(res,409,'As respostas já foram reveladas.');return;}
-    vote[role]=body.choice;
-    if(vote.host&&vote.guest) vote.revealed=true;
-    await persistRoom(room);notify(room);send(res,200,{ok:true});return;
-  }
-  if(!requireHost(room,body,res,role,user))return;
-  if(action==='navigate'&&req.method==='POST') {
-    const index=Number(body.index);
-    if(!Number.isInteger(index)||index<0||index>=room.questions.length){err(res,400,'Questão não existe.');return;}
-    room.index=index;await persistRoom(room);notify(room);send(res,200,{index});return;
-  }
-  if(action==='reveal'&&req.method==='POST') {
-    if(!room.questions.length){err(res,400,'Importe questões antes.');return;}
-    const vote=room.votes[room.index] ||= {host:null,guest:null,revealed:false};
-    vote.revealed=true;await persistRoom(room);notify(room);send(res,200,{ok:true});return;
-  }
-  if(action==='key'&&req.method==='POST') {
-    const q=room.questions[room.index];
-    if(!q) {err(res,400,'Importe questões antes.');return;}
-    if(body.correct!==null&&!q.alternatives.some(a=>a.letter===body.correct)){err(res,400,'Gabarito inválido.');return;}
-    q.correct=body.correct;
-    await persistRoom(room);notify(room);send(res,200,{ok:true});return;
-  }
-  if(action==='edit'&&req.method==='POST') {
-    const index=Number(body.index);
-    if(!Number.isInteger(index)||index<0||index>=room.questions.length){err(res,400,'Questão inválida.');return;}
-    const q=normalizeQuestion(body.question,index);
-    if(!q){err(res,400,'Informe um enunciado válido.');return;}
-    const old=room.questions[index];
-    const validCorrect=q.alternatives.some(a=>a.letter===old.correct);
-    room.questions[index]={...q,correct:q.correct||(validCorrect?old.correct:null)};
-    room.votes[index]=undefined;await persistRoom(room);notify(room);send(res,200,{ok:true});return;
-  }
-  err(res,404,'Ação não encontrada.');
-}
+let communityApi;
+const roomsApi=require('./rooms-api')({rooms,databaseRequest,storageEnabled,parseJson,send,err,normalizeQuestion,recordAnswer:(...args)=>communityApi.recordAnswer(...args),publicName:id=>communityApi.publicName(id),publicMembers:ids=>communityApi.publicMembers(ids)});
+communityApi=require('./community-api')({databaseRequest,storageEnabled,parseJson,send,err,roomsApi});
+async function handleApi(req,res,url,user){return roomsApi.handle(req,res,url,user);}
+setInterval(()=>roomsApi.sweep().catch(e=>console.error('Falha ao encerrar salas:',e.message)),30000).unref();
 const bankApi=createBankApi({databaseRequest,parseJson,send,err,isAdmin,storageEnabled});
 const theoryApi=createTheoryApi({databaseRequest,parseJson,send,err,isAdmin,storageEnabled});
 const files={'/banco':'bank.html','/banco.html':'bank.html','/bank.js':'bank.js','/bank.css':'bank.css','/':'index.html','/index.html':'index.html','/app.js':'app.js','/styles.css':'styles.css'};
 const mime={'.html':'text/html; charset=utf-8','.css':'text/css; charset=utf-8','.js':'application/javascript; charset=utf-8'};
 Object.assign(files,{'/teoria':'theory.html','/theory.js':'theory.js','/theory.css':'theory.css'});
 files['/theory-highlights.js']='theory-highlights.js';
+files['/navigation.js']='navigation.js';files['/navigation.css']='navigation.css';
+files['/room-voice.js']='room-voice.js';
+Object.assign(files,{'/comunidade':'community.html','/community.js':'community.js','/community.css':'community.css','/presence.js':'presence.js'});
 const server=http.createServer(async(req,res)=>{
   try {
     const url=new URL(req.url,'http://localhost');
@@ -478,6 +365,7 @@ const server=http.createServer(async(req,res)=>{
       if(!user){err(res,401,'Entre na sua conta para acessar as salas.');return;}
       if(url.pathname.startsWith('/api/bank/'))return await bankApi.handle(req,res,url,user);
       if(url.pathname==='/api/theory'||url.pathname.startsWith('/api/theory/'))return await theoryApi.handle(req,res,url,user);
+      if(url.pathname==='/api/community'||url.pathname.startsWith('/api/community/'))return await communityApi.handle(req,res,url,user);
       return await handleApi(req,res,url,user);
     }
     const filename=files[url.pathname];
