@@ -351,6 +351,7 @@ const bankApi=createBankApi({databaseRequest,parseJson,send,err,isAdmin,storageE
 const theoryApi=createTheoryApi({databaseRequest,parseJson,send,err,isAdmin,storageEnabled});
 const files={'/banco':'bank.html','/banco.html':'bank.html','/bank.js':'bank.js','/bank.css':'bank.css','/':'index.html','/index.html':'index.html','/app.js':'app.js','/styles.css':'styles.css'};
 files['/math-support.js']='math-support.js';files['/page-motion.js']='page-motion.js';
+files['/date-picker.js']='date-picker.js';files['/date-picker.css']='date-picker.css';
 const mime={'.html':'text/html; charset=utf-8','.css':'text/css; charset=utf-8','.js':'application/javascript; charset=utf-8'};
 Object.assign(files,{'/teoria':'theory.html','/theory.js':'theory.js','/theory.css':'theory.css'});
 files['/theory-highlights.js']='theory-highlights.js';

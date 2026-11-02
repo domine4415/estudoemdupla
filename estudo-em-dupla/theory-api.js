@@ -85,8 +85,12 @@ module.exports=function({databaseRequest,parseJson,send,err,isAdmin,storageEnabl
       const provided=body.contestIds??(body.contestId?[body.contestId]:[]);
       if(!Array.isArray(provided)||provided.length>100||provided.some(id=>typeof id!=='string'||!UUID.test(id)))return err(res,400,'Selecione concursos válidos (até 100 por aula).');
       const contestIds=[...new Set(provided)];
+      const questionIds=body.questionIds??[];
+      if(!Array.isArray(questionIds)||questionIds.length>200||questionIds.some(id=>typeof id!=='string'||!UUID.test(id)))return err(res,400,'Selecione até 200 questões válidas.');
+      const uniqueQuestions=[...new Set(questionIds)];
+      if(uniqueQuestions.length){const rows=await (await databaseRequest('dupla_bank_questions?'+new URLSearchParams({select:'id',id:'in.('+uniqueQuestions.join(',')+')',published:'eq.true'}))).json();if(rows.length!==uniqueQuestions.length)return err(res,400,'Uma questão selecionada não está mais publicada no banco. Remova-a ou publique novamente.');}
       if(contestIds.length){const rows=await (await databaseRequest('policial_contests?'+new URLSearchParams({select:'id',id:'in.('+contestIds.join(',')+')'}))).json();if(rows.length!==contestIds.length)return err(res,400,'Um dos concursos selecionados não existe mais. Atualize a página.');}
-      const row={title,subject,topic,subtopic:text(body.subtopic,180),contest_id:contestIds[0]||null,contest_ids:contestIds,content,images,published:body.published===true,updated_at:new Date().toISOString()};
+      const row={title,subject,topic,subtopic:text(body.subtopic,180),contest_id:contestIds[0]||null,contest_ids:contestIds,question_ids:uniqueQuestions,content,images,published:body.published===true,updated_at:new Date().toISOString()};
       const params=new URLSearchParams({select:'id'});if(body.id)params.set('id','eq.'+body.id);
       const rows=await (await query(params,{method:body.id?'PATCH':'POST',headers:{Prefer:'return=representation'},body:JSON.stringify(row)})).json();
       if(!rows.length)return err(res,404,'Aula não encontrada.');

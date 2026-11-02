@@ -119,7 +119,7 @@ function tocSections(root){
   });
 }
 function buildLessonToc(){
-  const links=$('lessonTocLinks'),sections=tocSections($('lessonPaper'));links.replaceChildren();$('lessonToc').hidden=!sections.length;
+  const links=$('lessonTocLinks'),sections=tocSections($('lessonPaper'));links.replaceChildren();$('lessonToc').hidden=!sections.length&&!(current?.question_ids?.length);if(current?.question_ids?.length){const shortcut=el('button','Questões da aula →');shortcut.type='button';shortcut.className='toc-link';shortcut.onclick=()=>{$('lessonQuestions').scrollIntoView({behavior:'smooth',block:'start'});$('lessonQuestions').focus({preventScroll:true});};links.append(shortcut);}
   sections.forEach((section,index)=>{
     section.id='aula-secao-'+(index+1);section.classList.add('lesson-anchor');section.tabIndex=-1;
     const button=el('button',section.textContent.trim());button.type='button';button.className='toc-link';
@@ -128,8 +128,8 @@ function buildLessonToc(){
     links.append(button);
   });
 }
-async function openLesson(id){const generation=++readGeneration;$('notice').textContent='Carregando aula...';try{const result=await api('theory/'+id);if(generation!==readGeneration)return;current=result.lesson;renderPaper($('lessonPaper'),current);buildLessonToc();window.lessonHighlighter?.open(current.id);$('editLesson').classList.toggle('hidden',!admin);pane('reader');$('notice').textContent='';history.replaceState(null,'','#aula='+id);window.scrollTo({top:0,behavior:'smooth'});}catch(e){if(generation===readGeneration)$('notice').textContent=e.message;}}
-function formLesson(){return {id:editingId,contestIds:[...$('editContest').querySelectorAll('input:checked')].map(input=>input.value),title:$('title').value,subject:$('editSubject').value,topic:$('editTopic').value,subtopic:$('editSubtopic').value,content:$('content').value,images,published:$('published').checked};}
+async function openLesson(id){const generation=++readGeneration;$('notice').textContent='Carregando aula...';try{const result=await api('theory/'+id);if(generation!==readGeneration)return;current=result.lesson;openLessonQuestions(current);renderPaper($('lessonPaper'),current);buildLessonToc();window.lessonHighlighter?.open(current.id);$('editLesson').classList.toggle('hidden',!admin);pane('reader');$('notice').textContent='';history.replaceState(null,'','#aula='+id);window.scrollTo({top:0,behavior:'smooth'});}catch(e){if(generation===readGeneration)$('notice').textContent=e.message;}}
+function formLesson(){return {id:editingId,contestIds:[...$('editContest').querySelectorAll('input:checked')].map(input=>input.value),title:$('title').value,subject:$('editSubject').value,topic:$('editTopic').value,subtopic:$('editSubtopic').value,content:$('content').value,images,questionIds:[...selectedLessonQuestions.keys()],published:$('published').checked};}
 function preview(){renderPaper($('preview'),formLesson());enablePreviewEditing();}
 function syncPreview(event){
   clearTimeout(previewTimer);
@@ -164,7 +164,7 @@ function enablePreviewEditing(){
     node.addEventListener('drop',event=>event.preventDefault());
   }
 }
-function edit(lesson){const chosen=lesson?lessonContestIds(lesson):(browse.contest&&browse.contest!=='geral'?[browse.contest]:[]);for(const input of $('editContest').querySelectorAll('input'))input.checked=chosen.includes(input.value);editingId=lesson?.id||null;images={...(lesson?.images||{})};for(const [id,key] of [['title','title'],['editSubject','subject'],['editTopic','topic'],['editSubtopic','subtopic'],['content','content']])$(id).value=lesson?.[key]||'';$('published').checked=lesson?.published||false;$('imageUpload').value='';$('deleteLesson').classList.toggle('hidden',!editingId);$('editorStatus').textContent='';dirty=false;pane('editor');preview();}
+function edit(lesson){prepareLessonQuestions(lesson);const chosen=lesson?lessonContestIds(lesson):(browse.contest&&browse.contest!=='geral'?[browse.contest]:[]);for(const input of $('editContest').querySelectorAll('input'))input.checked=chosen.includes(input.value);editingId=lesson?.id||null;images={...(lesson?.images||{})};for(const [id,key] of [['title','title'],['editSubject','subject'],['editTopic','topic'],['editSubtopic','subtopic'],['content','content']])$(id).value=lesson?.[key]||'';$('published').checked=lesson?.published||false;$('imageUpload').value='';$('deleteLesson').classList.toggle('hidden',!editingId);$('editorStatus').textContent='';dirty=false;pane('editor');preview();}
 async function imageFile(file){
   if(!file)return;if(!['image/png','image/jpeg','image/webp'].includes(file.type))throw Error('Selecione uma imagem PNG, JPG ou WebP.');if(file.size>12*1024*1024)throw Error('Escolha uma imagem de até 12 MB.');
   const bitmap=await createImageBitmap(file);try{const scale=Math.min(1,1600/Math.max(bitmap.width,bitmap.height));const canvas=document.createElement('canvas');canvas.width=Math.max(1,Math.round(bitmap.width*scale));canvas.height=Math.max(1,Math.round(bitmap.height*scale));canvas.getContext('2d').drawImage(bitmap,0,0,canvas.width,canvas.height);const src=canvas.toDataURL('image/webp',.85);const content=$('content');const used=Object.entries(images).filter(([key])=>content.value.includes(']('+key+')'));if(used.reduce((n,[,v])=>n+v.length,src.length)>4*1024*1024)throw Error('Limite de imagens atingido (4 MB). Divida o conteúdo em mais aulas.');images=Object.fromEntries(used);const key='imagem-'+crypto.randomUUID();images[key]=src;const alt=file.name.replace(/\.[^.]+$/,'').replace(/[\[\]\r\n]/g,'');content.setRangeText('\n\n!['+alt+']('+key+')\n\n',content.selectionStart,content.selectionEnd,'end');dirty=true;preview();content.focus();}finally{bitmap.close();}
@@ -279,3 +279,46 @@ $('lessonForm').onsubmit=async e=>{e.preventDefault();const button=$('saveLesson
 $('deleteLesson').onclick=async()=>{if(!editingId||!confirm('Excluir esta aula permanentemente?'))return;const button=$('deleteLesson');button.disabled=true;try{await api('theory/delete','POST',{id:editingId});dirty=false;current=null;editingId=null;history.replaceState(null,'',location.pathname);await load();pane('library');}catch(e){$('editorStatus').textContent=e.message;}finally{button.disabled=false;}};
 window.addEventListener('beforeunload',event=>{if(dirty){event.preventDefault();event.returnValue='';}});
 (async()=>{try{const session=await api('auth/me');if(!session.authenticated){$('notice').textContent='Entre na sua conta para estudar as aulas.';$('loginLink').classList.remove('hidden');return;}admin=!!session.isAdmin;window.lessonHighlighter?.setUser(session.user?.id);await load();$('newLesson').classList.toggle('hidden',!admin);$('manageContests').classList.toggle('hidden',!admin);pane('library');const match=location.hash.match(/^#aula=([0-9a-f-]+)$/i);if(match)await openLesson(match[1]);}catch(e){$('notice').textContent=e.message;}})();
+
+// Questões vinculadas: apenas identificadores são salvos na aula.
+let selectedLessonQuestions=new Map(),lessonBankFacets=null,lessonBankPage=1,lessonBankRequest=0;
+let lessonExerciseIds=[],lessonExerciseIndex=0,lessonExerciseGeneration=0;
+const lessonExerciseCache=new Map();
+function drawSelectedLessonQuestions(){
+  $('lessonSelectedCount').textContent=selectedLessonQuestions.size+' questões selecionadas (máximo 200)';
+  const root=$('lessonSelectedQuestions');root.replaceChildren();
+  for(const [id,label] of selectedLessonQuestions){const row=el('div');row.className='lesson-question-pick';const remove=el('button','Remover');remove.type='button';remove.className='btn btn-outline';remove.onclick=()=>{selectedLessonQuestions.delete(id);dirty=true;drawSelectedLessonQuestions();};row.append(el('span',label),remove);root.append(row);}
+}
+function lessonBankTopics(){const subject=$('lessonBankSubject').value;const select=$('lessonBankTopic');select.replaceChildren();select.disabled=!subject;const first=el('option',subject?'Todos os assuntos':'Escolha a disciplina primeiro');first.value='';select.append(first);for(const value of [...new Set((lessonBankFacets?.pairs||[]).filter(p=>p.subject===subject).map(p=>p.topic))]){const option=el('option',value);option.value=value;select.append(option);}}
+async function prepareLessonQuestions(lesson){
+  selectedLessonQuestions=new Map((lesson?.question_ids||[]).map((id,i)=>[id,'Questão vinculada '+(i+1)+' · '+id]));drawSelectedLessonQuestions();
+  $('lessonBankResults').replaceChildren();$('lessonBankStatus').textContent='';lessonBankPage=1;++lessonBankRequest;
+  try{if(!lessonBankFacets)lessonBankFacets=await api('bank/facets');const select=$('lessonBankSubject');select.replaceChildren();const first=el('option','Todas as disciplinas');first.value='';select.append(first);for(const value of lessonBankFacets.subjects||[]){const option=el('option',value);option.value=value;select.append(option);}select.value=lesson?.subject||'';lessonBankTopics();}catch(e){$('lessonBankStatus').textContent=e.message;}
+}
+async function findLessonBankQuestions(page=1){
+ const generation=++lessonBankRequest;lessonBankPage=page;$('lessonBankStatus').textContent='Buscando questões...';
+ try{const query=new URLSearchParams({page:String(page),subject:$('lessonBankSubject').value,topic:$('lessonBankTopic').value,search:$('lessonBankSearch').value});const data=await api('bank/questions?'+query);if(generation!==lessonBankRequest)return;
+ const root=$('lessonBankResults');root.replaceChildren();for(const q of data.items){const row=el('div');row.className='lesson-question-pick';const button=el('button',selectedLessonQuestions.has(q.id)?'Selecionada':'Adicionar');button.type='button';button.className='btn btn-soft';button.disabled=selectedLessonQuestions.has(q.id);button.onclick=()=>{if(selectedLessonQuestions.size>=200){$('lessonBankStatus').textContent='Limite de 200 questões por aula.';return;}selectedLessonQuestions.set(q.id,[q.subject,q.topic,q.statement||q.preview].filter(Boolean).join(' · '));button.disabled=true;button.textContent='Selecionada';dirty=true;drawSelectedLessonQuestions();};const text=el('div');text.append(el('strong',[q.subject,q.topic].filter(Boolean).join(' / ')),el('p',q.statement||q.preview));row.append(text,button);root.append(row);}
+ $('lessonBankPrevious').disabled=page===1;$('lessonBankNext').disabled=!data.hasMore;$('lessonBankStatus').textContent=data.items.length?'Página '+page:'Nenhuma questão encontrada.';
+ }catch(e){if(generation===lessonBankRequest)$('lessonBankStatus').textContent=e.message;}
+}
+function openLessonQuestions(lesson){lessonExerciseIds=lesson.question_ids||[];lessonExerciseIndex=0;++lessonExerciseGeneration;lessonExerciseCache.clear();$('lessonQuestions').hidden=!lessonExerciseIds.length;if(lessonExerciseIds.length)drawLessonExercise();}
+async function drawLessonExercise(){
+ const generation=++lessonExerciseGeneration,id=lessonExerciseIds[lessonExerciseIndex],root=$('lessonQuestionContent');root.replaceChildren(el('p','Carregando questão...'));
+ $('lessonQuestionCount').textContent=(lessonExerciseIndex+1)+' de '+lessonExerciseIds.length;$('lessonQuestionPrevious').disabled=lessonExerciseIndex===0;$('lessonQuestionNext').disabled=lessonExerciseIndex===lessonExerciseIds.length-1;
+ try{let q=lessonExerciseCache.get(id);if(!q){q=(await api('bank/question/'+id)).question;if(generation!==lessonExerciseGeneration)return;lessonExerciseCache.set(id,q);}if(generation!==lessonExerciseGeneration)return;
+ root.replaceChildren();root.append(el('p',[q.subject,q.topic,q.board,q.year].filter(Boolean).join(' / ')));const statement=el('div');statement.className='lesson-exercise-statement';inline(statement,q.statement);root.append(statement);
+ const answers=el('div');answers.className='lesson-exercise-answers';const feedback=el('div');feedback.className='lesson-exercise-feedback';
+ function showResult(result){for(const button of answers.querySelectorAll('button')){button.disabled=true;button.classList.toggle('is-correct',button.dataset.choice===result.correct);button.classList.toggle('is-wrong',button.dataset.choice===result.choice&&!result.isCorrect);}feedback.replaceChildren(el('strong',result.correct?(result.isCorrect?'Resposta correta.':'Resposta incorreta.')+' Gabarito: '+result.correct:'Resposta registrada.'));if(result.commentary){const explanation=el('div');renderBlocks(explanation,{content:result.commentary});feedback.append(explanation);}}
+ for(const alt of q.alternatives||[]){const button=el('button',alt.letter+' — '+alt.text);button.type='button';button.className='btn btn-outline';button.dataset.choice=alt.letter;button.onclick=async()=>{for(const b of answers.querySelectorAll('button'))b.disabled=true;feedback.textContent='Salvando resposta...';try{const result=await api('bank/answer','POST',{id,choice:alt.letter});q.lastAttempt={choice:alt.letter,isCorrect:result.isCorrect};q.correct=result.correct;q.commentary=result.commentary;if(generation===lessonExerciseGeneration)showResult(result);}catch(e){if(generation!==lessonExerciseGeneration)return;feedback.textContent=e.message;for(const b of answers.querySelectorAll('button'))b.disabled=false;}};answers.append(button);}
+ root.append(answers,feedback);if(q.lastAttempt)showResult({...q.lastAttempt,correct:q.correct,commentary:q.commentary});
+ }catch(e){if(generation===lessonExerciseGeneration){root.replaceChildren(el('p','Esta questão está indisponível. '+e.message));const retry=el('button','Tentar novamente');retry.className='btn btn-soft';retry.type='button';retry.onclick=drawLessonExercise;root.append(retry);}}
+}
+$('lessonBankSubject').onchange=lessonBankTopics;
+$('lessonBankFind').onclick=()=>findLessonBankQuestions();
+$('lessonBankPrevious').onclick=()=>findLessonBankQuestions(Math.max(1,lessonBankPage-1));
+$('lessonBankNext').onclick=()=>findLessonBankQuestions(lessonBankPage+1);
+$('lessonBankSearch').onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();findLessonBankQuestions();}};
+$('lessonQuestionPrevious').onclick=()=>{if(lessonExerciseIndex>0){lessonExerciseIndex--;drawLessonExercise();}};
+$('lessonQuestionNext').onclick=()=>{if(lessonExerciseIndex<lessonExerciseIds.length-1){lessonExerciseIndex++;drawLessonExercise();}};
+$('lessonTop').onclick=()=>window.scrollTo({top:0,behavior:window.matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth'});

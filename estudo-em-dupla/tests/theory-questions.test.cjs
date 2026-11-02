@@ -1,0 +1,7 @@
+const test=require('node:test');
+const assert=require('node:assert/strict');
+const create=require('../theory-api');
+const id='11111111-1111-4111-8111-111111111111';
+function setup(published=true){let saved;const api=create({storageEnabled:true,isAdmin:u=>u.admin,parseJson:async req=>req.body,send:(r,status,data)=>Object.assign(r,{status,data}),err:(r,status,error)=>Object.assign(r,{status,error}),databaseRequest:async(endpoint,options)=>{if(endpoint.startsWith('dupla_bank_questions?')){const p=new URL('http://local/'+endpoint).searchParams;assert.equal(p.get('published'),'eq.true');return {json:async()=>published?[{id}]:[]};}if(options?.method==='POST'){saved=JSON.parse(options.body);return {json:async()=>[{id}]};}throw Error('Unexpected endpoint');}});return {get saved(){return saved;},async save(questionIds,admin=true){const res={};await api.handle({method:'POST',body:{title:'Aula',subject:'Português',topic:'Hífen',content:'1. Introdução',questionIds}},res,new URL('http://local/api/theory/save'),{id:'user',admin});return res;}};}
+test('aula persiste referências únicas de questões publicadas',async()=>{const f=setup();assert.equal((await f.save([id,id])).status,200);assert.deepEqual(f.saved.question_ids,[id]);});
+test('rejeita questões inválidas, despublicadas e edição por aluno',async()=>{assert.equal((await setup().save(['invalid'])).status,400);assert.equal((await setup(false).save([id])).status,400);assert.equal((await setup().save([id],false)).status,403);});
