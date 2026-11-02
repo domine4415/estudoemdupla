@@ -353,6 +353,8 @@ Object.assign(files,{'/teoria':'theory.html','/theory.js':'theory.js','/theory.c
 files['/theory-highlights.js']='theory-highlights.js';
 files['/navigation.js']='navigation.js';files['/navigation.css']='navigation.css';
 files['/room-voice.js']='room-voice.js';
+files['/searchable-select.js']='searchable-select.js';files['/searchable-select.css']='searchable-select.css';
+files['/room-chat.js']='room-chat.js';files['/room-chat.css']='room-chat.css';
 Object.assign(files,{'/comunidade':'community.html','/community.js':'community.js','/community.css':'community.css','/presence.js':'presence.js'});
 const server=http.createServer(async(req,res)=>{
   try {

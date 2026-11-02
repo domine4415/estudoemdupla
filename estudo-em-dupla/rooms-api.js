@@ -3,6 +3,8 @@ const crypto=require('node:crypto');
 const {promisify}=require('node:util');
 const scrypt=promisify(crypto.scrypt);
 const {topicFilter,normalizeTopic}=require('./topic');
+const {shuffle,prepareQuestion}=require('./room-questions');
+const selectRoomQuestions=require('./room-bank-filter');
 const IDLE=30*60*1000;
 const text=(v,n=180)=>typeof v==='string'?v.trim().slice(0,n):'';
 module.exports=function({rooms,databaseRequest,storageEnabled,parseJson,send,err,normalizeQuestion,recordAnswer=async()=>{},publicName=async()=>null,publicMembers=async()=>[]}){
@@ -15,8 +17,8 @@ module.exports=function({rooms,databaseRequest,storageEnabled,parseJson,send,err
   }
   async function load(code){let r=rooms.get(code);if(!r&&storageEnabled){const rows=await (await databaseRequest('dupla_rooms?'+new URLSearchParams({select:'state',code:'eq.'+code,limit:'1'}))).json();if(rows[0]){r={...rows[0].state,clients:new Set()};rooms.set(code,r);}}if(r){migrate(r);if(r.isOpen!==false&&Date.now()-r.lastActivity>=IDLE){r.isOpen=false;await store(r);notify(r);}}return r;}
   const member=(r,user)=>r.members.find(m=>m.userId===user.id);
-  function publicQuestion(q){if(!q)return null;const {correct,commentary,...clean}=q;return clean;}
-  async function state(r,user){const profiles=await publicMembers(r.members.map(m=>m.userId));const vote=r.votes[r.index]||{choices:{},revealed:false};return {code:r.code,title:r.title,isOpen:r.isOpen!==false,role:r.hostUserId===user.id?'host':'guest',myUserId:user.id,index:r.index,questionsCount:r.questions.length,maxParticipants:r.maxParticipants,hasPassword:!!r.passwordHash,question:publicQuestion(r.questions[r.index]),questions:r.hostUserId===user.id?r.questions.map((q,i)=>({...publicQuestion(q),number:i+1})):undefined,myAnswer:vote.choices?.[user.id]||null,revealed:!!vote.revealed,participants:r.members.map(m=>{const p=profiles.find(p=>p.user_id===m.userId);return {userId:m.userId,name:p?.display_name||(!m.name?.includes('@')?m.name:'Participante'),avatar:p?.avatar_data||'',owner:m.userId===r.hostUserId,answered:!!vote.choices?.[m.userId],answer:vote.revealed?vote.choices?.[m.userId]||null:null};}),lastActivity:r.lastActivity};}
+  function publicQuestion(q,revealed=false){if(!q)return null;const {correct,commentary,...clean}=q;return revealed?{...clean,correct,commentary}:clean;}
+  async function state(r,user){const profiles=await publicMembers(r.members.map(m=>m.userId));const vote=r.votes[r.index]||{choices:{},revealed:false};return {code:r.code,title:r.title,isOpen:r.isOpen!==false,role:r.hostUserId===user.id?'host':'guest',myUserId:user.id,index:r.index,questionsCount:r.questions.length,maxParticipants:r.maxParticipants,hasPassword:!!r.passwordHash,question:publicQuestion(r.questions[r.index],!!vote.revealed),questions:r.hostUserId===user.id?r.questions.map((q,i)=>({...publicQuestion(q),number:i+1})):undefined,myAnswer:vote.choices?.[user.id]||null,revealed:!!vote.revealed,participants:r.members.map(m=>{const p=profiles.find(p=>p.user_id===m.userId);return {userId:m.userId,name:p?.display_name||(!m.name?.includes('@')?m.name:'Participante'),avatar:p?.avatar_data||'',owner:m.userId===r.hostUserId,correctCount:r.questions.reduce((n,q,i)=>n+(q.correct&&r.votes[i]?.revealed&&r.votes[i]?.choices?.[m.userId]===q.correct?1:0),0),wrongCount:r.questions.reduce((n,q,i)=>n+(q.correct&&r.votes[i]?.revealed&&r.votes[i]?.choices?.[m.userId]&&r.votes[i]?.choices?.[m.userId]!==q.correct?1:0),0),answered:!!vote.choices?.[m.userId],answer:vote.revealed?vote.choices?.[m.userId]||null:null};}),lastActivity:r.lastActivity};}
   async function list(user){
     let catalog;
     if(storageEnabled){catalog=await (await databaseRequest('dupla_rooms?'+new URLSearchParams({select:'code,state:state',order:'updated_at.desc',limit:'100'}))).json();catalog=catalog.map(x=>rooms.get(x.code)||{...x.state,clients:new Set()});}
@@ -52,12 +54,29 @@ module.exports=function({rooms,databaseRequest,storageEnabled,parseJson,send,err
       if(!m)return err(res,403,'Entre na sala para acessar.');
       if(action==='state'&&req.method==='GET')return send(res,200,await state(r,user));
       if(r.isOpen===false)return err(res,409,'Sala encerrada por inatividade ou pelo dono.');
+      if(action==='chat'&&req.method==='GET'){
+        const messages=(r.messages||[]).slice(-100),profiles=await publicMembers([...new Set(messages.map(x=>x.userId))]);
+        return send(res,200,{messages:messages.map(msg=>{const profile=profiles.find(p=>p.user_id===msg.userId);return {...msg,name:profile?.display_name||msg.name,avatar:profile?.avatar_data||''};})});
+      }
       if(action==='restore'&&req.method==='GET')return send(res,200,{code,token:m.token,role});
       if(action==='events'&&req.method==='GET'){
         res.writeHead(200,{'Content-Type':'text/event-stream; charset=utf-8','Cache-Control':'no-cache, no-transform','Connection':'keep-alive','X-Accel-Buffering':'no'});res.roomUserId=user.id;r.clients.add(res);res.write('event: refresh\ndata: {}\n\n');const timer=setInterval(()=>{try{res.write(': heartbeat\n\n');}catch{}},20000);req.on('close',()=>{clearInterval(timer);r.clients.delete(res);});return;
       }
       if(action==='voice-config'&&req.method==='GET'){let iceServers=[{urls:'stun:stun.l.google.com:19302'}];try{if(process.env.VOICE_ICE_SERVERS)iceServers=JSON.parse(process.env.VOICE_ICE_SERVERS);}catch{return err(res,503,'Áudio não configurado.');}return send(res,200,{iceServers,participantId:user.id});}
       if(req.method!=='POST')return err(res,404,'Rota não encontrada.');const body=await parseJson(req);
+      if(action==='chat'){
+        const content=typeof body.text==='string'?body.text.trim():'';
+        if(!content||content.length>1000)return err(res,400,'A mensagem deve ter entre 1 e 1.000 caracteres.');
+        const previous=[...(r.messages||[])].reverse().find(x=>x.userId===user.id);
+        if(previous&&Date.now()-Date.parse(previous.at)<1500)return err(res,429,'Aguarde um instante antes de enviar outra mensagem.');
+        const profiles=await publicMembers([user.id]),profile=profiles[0];
+        const message={id:crypto.randomUUID(),userId:user.id,name:profile?.display_name||(!m.name?.includes('@')?m.name:'Participante'),text:content,at:new Date().toISOString()};
+        const prior=r.messages||[];r.messages=[...prior,message].slice(-100);r.lastActivity=Date.now();
+        try{await store(r);}catch(error){r.messages=prior;throw error;}
+        const visible={...message,avatar:profile?.avatar_data||''};
+        for(const client of r.clients)try{client.write('event: chat\ndata: '+JSON.stringify(visible)+'\n\n');}catch{}
+        return send(res,200,{message:visible});
+      }
       if(['import','edit','key'].includes(action))return err(res,403,'Importação, edição e gabaritos não estão disponíveis nas salas.');
       if(action==='voice'){
         const s=body.signal;if(!s||!['ready','offer','answer','leave'].includes(s.type)||typeof s.session!=='string'||s.session.length>80||s.to!==undefined&&typeof s.to!=='string')return err(res,400,'Sinal de áudio inválido.');
@@ -78,6 +97,7 @@ module.exports=function({rooms,databaseRequest,storageEnabled,parseJson,send,err
         const q=r.questions[r.index];if(!q||body.index!==r.index||!q.alternatives.some(a=>a.letter===body.choice))return err(res,400,'Questão ou alternativa inválida.');
         const vote=r.votes[r.index]||={choices:{},revealed:false};if(vote.revealed||vote.choices[user.id])return err(res,409,'Sua resposta já foi registrada ou as escolhas foram reveladas.');
         if(q.correct)await recordAnswer(user.id,r.code,q,body.choice===q.correct);
+        const solvedKey=crypto.createHash('sha256').update(q.statement).digest('hex');r.solvedQuestionKeys=[...new Set([...(r.solvedQuestionKeys||[]),solvedKey])];
         vote.choices[user.id]=body.choice;if(r.members.length>1&&r.members.every(x=>vote.choices[x.userId]))vote.revealed=true;
       }else{
         if(role!=='host')return err(res,403,'Somente o dono controla as questões.');
@@ -100,12 +120,13 @@ module.exports=function({rooms,databaseRequest,storageEnabled,parseJson,send,err
         else if(action==='navigate'){if(!Number.isInteger(body.index)||body.index<0||body.index>=r.questions.length)return err(res,400,'Questão inválida.');r.index=body.index;}
         else if(action==='reveal'){const vote=r.votes[r.index]||={choices:{},revealed:false};vote.revealed=true;}
         else if(action==='from-bank'){
+          if(text(body.topic)&&!text(body.subject))return err(res,400,'Escolha uma disciplina antes de selecionar o assunto.');
           if(!storageEnabled)return err(res,503,'Configure o banco de questões.');
-          const p=new URLSearchParams({select:'data',published:'eq.true',order:'created_at.desc',limit:String(Math.min(200,Math.max(1,parseInt(body.limit,10)||50)))});if(text(body.subject))p.set('subject','eq.'+text(body.subject));if(text(body.topic))p.set('topic',topicFilter(text(body.topic)));
-          const rows=await (await databaseRequest('dupla_bank_questions?'+p)).json();if(!rows.length)return err(res,404,'Não há questões publicadas nesses filtros.');r.questions=rows.map((x,i)=>normalizeQuestion({...x.data,topic:normalizeTopic(x.data?.topic)},i)).filter(Boolean);r.index=0;r.votes={};
+          r.solvedQuestionKeys=[...new Set([...(r.solvedQuestionKeys||[]),...r.questions.filter((q,i)=>Object.values(r.votes[i]?.choices||{}).some(Boolean)).map(q=>crypto.createHash('sha256').update(q.statement).digest('hex'))])];
+          const rows=await selectRoomQuestions({databaseRequest,room:r,body});if(!rows.length)return err(res,404,'Nenhuma questão atende aos filtros. Tente ampliar a seleção.');r.questions=shuffle(rows.map((x,i)=>normalizeQuestion({...x.data,id:x.id||x.data.id,topic:normalizeTopic(x.data?.topic)},i)).filter(Boolean).map(q=>prepareQuestion(q)));r.index=0;r.votes={};
         }else return err(res,404,'Ação não encontrada.');
       }
-      r.lastActivity=Date.now();await store(r);notify(r);return send(res,200,{ok:true});
+      r.lastActivity=Date.now();await store(r);notify(r);return send(res,200,{ok:true,...(action==='from-bank'?{imported:r.questions.length}:{})});
     }finally{unlock();if(locks.get(code)===queued)locks.delete(code);}
   }
   async function sweep(){for(const r of rooms.values()){migrate(r);if(r.isOpen!==false&&Date.now()-r.lastActivity>=IDLE){r.isOpen=false;await store(r);notify(r);}}}

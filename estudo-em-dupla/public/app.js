@@ -63,8 +63,8 @@ async function request(endpoint,method='GET',body){
 }
 function credentials(){return role==='host'?{hostToken:token}:{token};}
 function roomLink(){return location.origin+'/?room='+encodeURIComponent(code);}
-function setSession(c,t,r){if(!signedIn){showAuthMessage('Entre na conta antes de acessar a sala.',true);return;}code=c;token=t;role=r;localStorage.setItem('dupla_'+code,JSON.stringify({token,role}));localStorage.setItem('dupla_last_room',code);history.replaceState(null,'','/?room='+code);$('landing').classList.add('hidden');$('workspace').classList.remove('hidden');$('topRoom').classList.remove('hidden');$('roomQuickNav').classList.remove('hidden');$('roomCode').textContent=code;document.body.classList.toggle('guest',role==='guest');$('roomTitle').textContent=role==='host'?'Sala '+code:'Sala '+code;window.roomVoice?.setup({role:r,send:signal=>request('/voice','POST',{...credentials(),signal}),config:()=>request('/voice-config?token='+encodeURIComponent(token))});connect();refresh();}
-function connect(){if(es)es.close();es=new EventSource('/api/room/'+encodeURIComponent(code)+'/events?token='+encodeURIComponent(token));es.addEventListener('refresh',()=>refresh());es.addEventListener('expelled',()=>leaveRoom('Você foi expulso da sala pelo dono.'));es.addEventListener('voice',event=>{try{window.roomVoice?.receive(JSON.parse(event.data));}catch{}});es.onerror=()=>{};}
+function setSession(c,t,r){if(!signedIn){showAuthMessage('Entre na conta antes de acessar a sala.',true);return;}code=c;token=t;role=r;localStorage.setItem('dupla_'+code,JSON.stringify({token,role}));localStorage.setItem('dupla_last_room',code);history.replaceState(null,'','/?room='+code);$('landing').classList.add('hidden');$('workspace').classList.remove('hidden');$('topRoom').classList.remove('hidden');$('roomQuickNav').classList.remove('hidden');$('roomCode').textContent=code;document.body.classList.toggle('guest',role==='guest');$('roomTitle').textContent=role==='host'?'Sala '+code:'Sala '+code;window.roomVoice?.setup({role:r,send:signal=>request('/voice','POST',{...credentials(),signal}),config:()=>request('/voice-config?token='+encodeURIComponent(token))});window.roomChat?.setup({self:()=>view?.myUserId,get:()=>request('/chat'),send:text=>request('/chat','POST',{...credentials(),text})});connect();refresh();}
+function connect(){if(es)es.close();es=new EventSource('/api/room/'+encodeURIComponent(code)+'/events?token='+encodeURIComponent(token));es.addEventListener('refresh',()=>refresh());es.addEventListener('expelled',()=>leaveRoom('Você foi expulso da sala pelo dono.'));es.addEventListener('chat',event=>{try{window.roomChat?.receive(JSON.parse(event.data));}catch{}});es.addEventListener('voice',event=>{try{window.roomVoice?.receive(JSON.parse(event.data));}catch{}});es.onerror=()=>{};}
 let ongoing=null,refreshQueued=false;
 async function refresh(){
   if(ongoing){refreshQueued=true;return ongoing;}
@@ -192,10 +192,9 @@ function render(q){
   $('questionTotal').textContent=q.questionsCount;
   $('memberStatus').textContent=`${q.participants.length}/${q.maxParticipants} participantes`;
   $('sessionSubtitle').textContent=q.questionsCount?`${q.questionsCount} questões do banco • questão ${q.index+1}`:'Escolha questões publicadas no banco para começar';
-  $('scoreDetail').textContent='Gabaritos e comentários não são exibidos nas salas.';
-  $('resultExplanation').textContent=q.revealed?'Respostas dos participantes reveladas. O gabarito permanece oculto.':'As respostas ficam ocultas até todos responderem ou o dono revelar as escolhas.';
+  const participantSelect=$('bankRoomParticipant'),chosen=participantSelect.value;participantSelect.replaceChildren(new Option('Selecione uma pessoa',''));for(const person of q.participants)participantSelect.add(new Option(person.name,person.userId));if(q.participants.some(p=>p.userId===chosen))participantSelect.value=chosen;participantSelect.disabled=$('bankRoomHistory').value!=='participant';
   const roster=$('roomParticipants');roster.replaceChildren();
-  for(const person of q.participants){const line=document.createElement('div');line.className='player-status';line.dataset.voiceUser=person.userId;const photo=document.createElement('img');photo.className='room-profile-photo';if(/^data:image\/(webp|png|jpeg);base64,/.test(person.avatar||'')){photo.src=person.avatar;photo.alt=person.name;line.append(photo);}else{const initial=document.createElement('span');initial.className='avatar room-profile-photo';initial.textContent=person.name.slice(0,1).toUpperCase();line.append(initial);}const label=document.createElement('a');label.href='/comunidade#perfil='+encodeURIComponent(person.userId);label.textContent=person.name+(person.owner?' (dono)':'');const info=document.createElement('small');info.textContent=q.revealed?(person.answer?'Resposta: '+person.answer:'Não respondeu'):(person.answered?'✓ Respondeu':'Aguardando resposta');const wave=document.createElement('span');wave.className='voice-wave';wave.setAttribute('aria-hidden','true');for(let i=0;i<5;i++)wave.append(document.createElement('i'));line.append(label,info,wave);if(q.role==='host'&&!person.owner){const kick=document.createElement('button');kick.type='button';kick.className='btn btn-soft room-kick';kick.textContent='Expulsar';kick.onclick=()=>{if(confirm('Expulsar '+person.name+'? Ela será desconectada e poderá entrar novamente se houver vaga.'))command('kick',{userId:person.userId});};line.append(kick);}roster.append(line);}
+  for(const person of q.participants){const line=document.createElement('div');line.className='player-status';line.dataset.voiceUser=person.userId;const photo=document.createElement('img');photo.className='room-profile-photo';if(/^data:image\/(webp|png|jpeg);base64,/.test(person.avatar||'')){photo.src=person.avatar;photo.alt=person.name;line.append(photo);}else{const initial=document.createElement('span');initial.className='avatar room-profile-photo';initial.textContent=person.name.slice(0,1).toUpperCase();line.append(initial);}const label=document.createElement('a');label.href='/comunidade#perfil='+encodeURIComponent(person.userId);label.textContent=person.name+(person.owner?' (dono)':'');const info=document.createElement('small');info.textContent=q.revealed?(person.answer?'Resposta: '+person.answer:'Não respondeu'):(person.answered?'✓ Respondeu':'Aguardando resposta');const wave=document.createElement('span');wave.className='voice-wave';wave.setAttribute('aria-hidden','true');for(let i=0;i<5;i++)wave.append(document.createElement('i'));const counts=document.createElement('span');counts.className='room-answer-counts';const hits=document.createElement('span');hits.textContent='C '+(person.correctCount||0);hits.title='Acertos';const misses=document.createElement('span');misses.textContent='X '+(person.wrongCount||0);misses.title='Erros';counts.append(hits,misses);line.append(label,info,wave,counts);if(q.role==='host'&&!person.owner){const kick=document.createElement('button');kick.type='button';kick.className='btn btn-soft room-kick';kick.textContent='Expulsar';kick.onclick=()=>{if(confirm('Expulsar '+person.name+'? Ela será desconectada e poderá entrar novamente se houver vaga.'))command('kick',{userId:person.userId});};line.append(kick);}roster.append(line);}
   window.roomVoice?.refreshIndicators();
   if(role==='host')renderList(q);
   $('emptyState').classList.toggle('hidden',!!q.question);
@@ -219,7 +218,7 @@ function render(q){
   $('feedback').classList.toggle('hidden',!q.revealed);
   if(q.revealed){
     const box=$('feedback');box.replaceChildren();
-    for(const person of q.participants){const line=document.createElement('div');line.textContent=person.name+': '+(person.answer||'não respondeu');box.append(line);}
+    if(data.correct){const result=document.createElement('strong');result.textContent='Gabarito: '+data.correct;box.append(result);}if(data.commentary)box.append(renderRoomCommentary(data.commentary));if(!box.childNodes.length)box.classList.add('hidden');
   }
   if(role==='host'){
     $('prevQuestion').disabled=q.index===0;$('nextQuestion').disabled=q.index>=q.questionsCount-1;
@@ -243,8 +242,10 @@ function renderList(q){
 let roomBankPairs=[];
 function populateRoomBankTopics(){
   const select=$('bankRoomTopic'),sub=$('bankRoomSubject').value;
-  select.replaceChildren(new Option('Todos os assuntos',''));
-  for(const item of [...new Set(roomBankPairs.filter(x=>!sub||x.subject===sub).map(x=>x.topic))].sort())select.add(new Option(item,item));
+  select.disabled=!sub;
+  select.replaceChildren(new Option(sub?'Todos os assuntos':'Escolha uma disciplina primeiro',''));
+  if(!sub)return;
+  for(const item of [...new Set(roomBankPairs.filter(x=>x.subject===sub).map(x=>x.topic))].sort())select.add(new Option(item,item));
 }
 async function loadRoomBankFilters(){
   if(!signedIn)return;
@@ -254,6 +255,7 @@ async function loadRoomBankFilters(){
     roomBankPairs=data.pairs||[];
     $('bankRoomSubject').replaceChildren(new Option('Todas as disciplinas',''));
     for(const sub of data.subjects||[])$('bankRoomSubject').add(new Option(sub,sub));
+    for(const [id,values,label] of [['bankRoomBoard',data.boards||[],'Todas as bancas'],['bankRoomYear',(data.years||[]).map(String),'Todos os anos']]){$(id).replaceChildren(new Option(label,''));for(const value of values)$(id).add(new Option(value,value));}
     populateRoomBankTopics();
   }catch(e){console.warn('Filtros do banco indisponíveis:',e);}
 }
@@ -262,7 +264,7 @@ async function importBankIntoRoom(){
   const btn=$('importFromBank');btn.disabled=true;
   try{
     const reply=await request('/from-bank','POST',{
-      ...credentials(),subject:$('bankRoomSubject').value,topic:$('bankRoomTopic').value,limit:Number($('bankRoomLimit').value)||50
+      ...credentials(),subject:$('bankRoomSubject').value,topic:$('bankRoomTopic').value,history:$('bankRoomHistory').value,participantId:$('bankRoomParticipant').value,board:$('bankRoomBoard').value,year:$('bankRoomYear').value,type:$('bankRoomType').value,excludeOutdated:$('bankRoomExcludeOutdated').checked,onlyOriginal:$('bankRoomOnlyOriginal').checked,limit:Number($('bankRoomLimit').value)||50
     });
     $('importMessage').textContent=reply.imported+' questões carregadas do seu banco.';
     await refresh();alertUser(reply.imported+' questões do banco prontas para a sala!');
@@ -291,7 +293,7 @@ async function saveEdit(e){e.preventDefault();
 }
 
 function leaveRoom(message=''){
-  window.roomVoice?.stop();
+  window.roomVoice?.stop();window.roomChat?.stop();
   if(code&&token)request('/leave','POST',credentials()).catch(()=>{});
   if(es){es.close();es=null;}
   if(code){localStorage.removeItem('dupla_'+code);}
@@ -466,7 +468,7 @@ async function boot(){
   $('tabRegister').addEventListener('click',()=>switchAuthMode('register'));
   $('authForm').addEventListener('submit',onAuthSubmit);
   $('logout').addEventListener('click',async()=>{
-    window.roomVoice?.stop();
+    window.roomVoice?.stop();window.roomChat?.stop();
     if(code&&token)try{await request('/leave','POST',credentials());}catch{}
     try{await fetch('/api/community/offline',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});}catch{}
     try {await authFetch('logout','POST',{});}catch(e){alertUser(e.message,true);return;}
@@ -501,3 +503,5 @@ for(const name of ['pointerdown','keydown','touchstart'])document.addEventListen
 $('roomSettings').onclick=()=>{$('settingsAccess').value=view?.hasPassword?'password':'open';$('settingsPassword').value='';$('settingsStatus').textContent='';$('roomSettingsDialog').showModal();};
 $('closeRoomSettings').onclick=()=>$('roomSettingsDialog').close();
 $('roomSettingsForm').onsubmit=async event=>{event.preventDefault();const button=$('saveRoomSettings');button.disabled=true;try{await request('/settings','POST',{...credentials(),access:$('settingsAccess').value,password:$('settingsPassword').value});await refresh();$('roomSettingsDialog').close();alertUser('Senha da sala atualizada.');}catch(error){$('settingsStatus').textContent=error.message;}finally{button.disabled=false;}};
+
+$('bankRoomHistory').onchange=()=>{const select=$('bankRoomParticipant');select.disabled=$('bankRoomHistory').value!=='participant';if(select.disabled)select.value='';};

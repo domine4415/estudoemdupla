@@ -54,8 +54,8 @@ function withAsync(button,task){return async()=>{if(button.disabled)return;butto
 function showAdmin(open){$('statsPane').classList.add('hidden');$('studyPane').classList.toggle('hidden',open);$('adminPane').classList.toggle('hidden',!open);$('adminToggle').textContent=open?'↩ Resolver questões':'⚙ Gerenciar questões';if(open){loadDrafts();loadDeleteFilters();}else loadList();}
 async function loadFacets(){try{filters=await api('bank/facets');fillDropdown('filterSubject',filters.subjects,'Todas as disciplinas');fillDropdown('filterBoard',filters.boards,'Todas as bancas');fillDropdown('filterYear',filters.years.map(String),'Todos os anos');fillTopics();}catch(e){notify('Filtros indisponíveis: '+e.message,true);}}
 function fillDropdown(id,values,prompt){const select=$(id),old=select.value;select.replaceChildren();addOption(select,'',prompt);for(const v of values||[])addOption(select,String(v),String(v));if([...select.options].some(o=>o.value===old))select.value=old;}
-function fillTopics(){const subject=$('filterSubject').value;const topics=[...new Set((filters.pairs||[]).filter(p=>!subject||p.subject===subject).map(p=>p.topic))].sort((a,b)=>a.localeCompare(b,'pt-BR'));fillDropdown('filterTopic',topics,'Todos os tópicos');}
-async function loadProgress(){try{const p=await api('bank/progress');$('statTotal').textContent=p.total??0;$('statAnswered').textContent=p.answered??0;$('statCorrect').textContent=p.correct??0;$('statWrong').textContent=p.wrong??0;}catch(e){notify('Não foi possível recuperar seu desempenho: '+e.message,true);}}
+function fillTopics(){const subject=$('filterSubject').value;const topic=$('filterTopic');topic.disabled=!subject;if(!subject){topic.replaceChildren(new Option('Escolha uma disciplina primeiro',''));return;}const topics=[...new Set((filters.pairs||[]).filter(p=>p.subject===subject).map(p=>p.topic))].sort((a,b)=>a.localeCompare(b,'pt-BR'));fillDropdown('filterTopic',topics,'Todos os tópicos');}
+async function loadProgress(){try{const p=await api('bank/progress');$('statAnswered').textContent=p.answered??0;$('statCorrect').textContent=p.correct??0;$('statWrong').textContent=p.wrong??0;}catch(e){notify('Não foi possível recuperar seu desempenho: '+e.message,true);}}
 let filterGeneration=0, responseCache=new Map(), requestGeneration=0;
 function renderCommentary(value){
   const root=elt('div','commentary rich-comment');
@@ -112,6 +112,7 @@ async function loadList(){
   const token=++requestGeneration;
   const q=new URLSearchParams({page:String(page)});
   for(const [key,id] of [['subject','filterSubject'],['topic','filterTopic'],['board','filterBoard'],['year','filterYear'],['search','filterSearch'],['status','filterStatus'],['type','filterType']]){const value=$(id).value.trim();if(value)q.set(key,value);}
+  if($('filterExcludeOutdated').checked)q.set('excludeOutdated','true');if($('filterOnlyOriginal').checked)q.set('onlyOriginal','true');
   $('listMessage').textContent='Carregando questões...';$('questionCards').replaceChildren();
   try{
     const data=await api('bank/questions?'+q);if(token!==requestGeneration)return;
@@ -206,7 +207,7 @@ function parseRecord(raw,index){
   if(topic==='Geral'&&$('topicOverride').value.trim())topic=$('topicOverride').value.trim();
   return {id:String(raw.id||index+1),statement:clean(extra.statement||raw.statement),alternatives,type,
     correct,commentary:clean(raw.commentary||raw.explanation||raw.comentario||raw.justification),
-    subject,topic,board:clean(extra.board||raw.board),exam:clean(extra.exam||raw.exam),
+    subject,topic,isOriginal:raw.isOriginal===true||raw.inedita===true,isOutdated:raw.isOutdated===true||raw.desatualizada===true,board:clean(extra.board||raw.board),exam:clean(extra.exam||raw.exam),
     year:clean(extra.year||raw.year),originalId:clean(extra.originalId||raw.originalId||(String(raw.statementHtml||'').match(/tecconcursos\.com\.br\/questoes\/(\d{4,20})/)||[])[1]||(/^\d{4,20}$/.test(String(raw.id||''))?raw.id:'')),link:clean(extra.link||raw.link)};
 }
 function extractRecords(data){const items=Array.isArray(data)?data:(Array.isArray(data.questions)?data.questions:(data.statement?[data]:null));
@@ -272,7 +273,7 @@ function createOriginal(){
   $('editSubject').value='';$('editTopic').value='';$('editBoard').value='';$('editYear').value='';
   $('editStatement').value='';$('editAlternatives').value='A) \nB) ';
   $('editCommentary').value='';refreshKeyOptions();$('editCorrect').value='';
-  $('editPublished').checked=true;$('deleteQuestion').classList.add('hidden');
+  $('editOriginal').checked=false;$('editOutdated').checked=false;$('editPublished').checked=true;$('deleteQuestion').classList.add('hidden');
   $('editorDialog').showModal();
 }
 async function editItem(id){
@@ -285,12 +286,12 @@ async function editItem(id){
     $('editAlternatives').value=(q.alternatives||[]).map(a=>`${a.letter}) ${a.text}`).join('\n');
     $('editCommentary').value=q.commentary||'';
     refreshKeyOptions();$('editCorrect').value=q.correct||'';
-    $('editPublished').checked=result.published;
+    $('editOriginal').checked=!!q.isOriginal;$('editOutdated').checked=!!q.isOutdated;$('editPublished').checked=result.published;
     $('editorDialog').showModal();
   }catch(e){notify(e.message,true);}
 }
 async function saveEdit(e){e.preventDefault();
-  const q={...editingRecord,id:editingId,subject:$('editSubject').value,topic:$('editTopic').value,
+  const q={...editingRecord,id:editingId,isOriginal:$('editOriginal').checked,isOutdated:$('editOutdated').checked,subject:$('editSubject').value,topic:$('editTopic').value,
     board:$('editBoard').value,year:$('editYear').value,statement:$('editStatement').value,
     alternatives:$('editAlternatives').value.split(/\r?\n/).map((line,i)=>{
       const m=line.trim().match(/^([A-H])\s*[).:\-]\s*(.+)$/i);return{letter:m?m[1].toUpperCase():String.fromCharCode(65+i),text:m?m[2]:line.trim()};
@@ -367,11 +368,11 @@ async function showStats(){
   $('statsSummary').textContent='Carregando...';$('statsSubjects').replaceChildren();
   try{const d=await api('bank/statistics?'+params);if(generation!==statsGeneration)return;const pct=d.answered?Math.round(d.correct/d.answered*100):0;
     $('statsSummary').replaceChildren();
-    for(const [label,value] of [['Questões disponíveis',d.total],['Questões resolvidas',d.answered],['Acertos',d.correct],['Erros',d.wrong],['Taxa de acertos',pct+'%'],['Tentativas realizadas',d.attempts]]){
+    for(const [label,value] of [['Questões respondidas',d.answered],['Acertos',d.correct],['Erros',d.wrong],['Taxa de acertos',pct+'%'],['Tentativas realizadas',d.attempts]]){
       const card=elt('div','bank-stat');card.append(elt('strong','',String(value)),elt('span','',label));$('statsSummary').append(card);
     }
-    if(!d.subjects.length)$('statsSubjects').append(elt('p','bank-note','Nenhuma questão encontrada com os filtros selecionados.'));
-    for(const item of d.subjects){const box=elt('div','stats-subject');const label=elt('div','stats-subject-heading');label.append(elt('strong','',item.subject),elt('span','',`${item.correct} acertos • ${item.wrong} erros • ${item.answered}/${item.total} resolvidas`));
+    if(!d.subjects.length)$('statsSubjects').append(elt('p','bank-note','Nenhuma questão respondida com os filtros selecionados.'));
+    for(const item of d.subjects){const box=elt('div','stats-subject');const label=elt('div','stats-subject-heading');label.append(elt('strong','',item.subject),elt('span','',`${item.correct} acertos • ${item.wrong} erros • ${item.answered} respondidas • ${item.answered?Math.round(item.correct/item.answered*100):0}% de acertos`));
       const track=elt('div','stats-track');const bar=elt('div','stats-track-fill');bar.style.width=(item.answered?Math.round(item.correct/item.answered*100):0)+'%';track.append(bar);box.append(label,track);$('statsSubjects').append(box);}
   }catch(e){if(generation===statsGeneration)$('statsSummary').textContent='Não foi possível carregar as estatísticas: '+e.message;}
 }
@@ -387,10 +388,10 @@ async function boot(){
   $('statsClear').onclick=()=>{$('statsFilters').reset();fillStatsTopics();showStats();};
   $('mobileMenu').onclick=()=>{const open=$('sideNav').classList.toggle('open');$('menuShade').hidden=!open;$('mobileMenu').setAttribute('aria-expanded',String(open));};
   $('menuShade').onclick=()=>{$('sideNav').classList.remove('open');$('menuShade').hidden=true;$('mobileMenu').setAttribute('aria-expanded','false');};$('statsBack').onclick=()=>{$('statsPane').classList.add('hidden');$('studyPane').classList.remove('hidden');loadList();};
-  $('applyFilter').onclick=applyFreshFilter;$('filterSearch').onkeydown=e=>{if(e.key==='Enter')applyFreshFilter();};
-  $('filterSubject').onchange=()=>{fillTopics();applyFreshFilter();};
+  $('filterExcludeOutdated').onchange=applyFreshFilter;$('filterOnlyOriginal').onchange=applyFreshFilter;$('applyFilter').onclick=applyFreshFilter;$('filterSearch').onkeydown=e=>{if(e.key==='Enter')applyFreshFilter();};
+  $('filterSubject').onchange=()=>{$('filterTopic').value='';fillTopics();applyFreshFilter();};
   for(const id of ['filterTopic','filterBoard','filterYear','filterStatus','filterType'])$(id).onchange=applyFreshFilter;
-  $('clearFilter').onclick=()=>{for(const id of ['filterSearch','filterSubject','filterTopic','filterBoard','filterYear','filterStatus','filterType'])$(id).value='';fillTopics();applyFreshFilter();};
+  $('clearFilter').onclick=()=>{$('filterExcludeOutdated').checked=false;$('filterOnlyOriginal').checked=false;for(const id of ['filterSearch','filterSubject','filterTopic','filterBoard','filterYear','filterStatus','filterType'])$(id).value='';fillTopics();applyFreshFilter();};
   $('previousPage').onclick=()=>{if(page>1){page--;loadList();document.querySelector('.bank-results')?.scrollIntoView({behavior:'smooth',block:'start'});}};
   $('nextPage').onclick=()=>{if(hasMore){page++;loadList();document.querySelector('.bank-results')?.scrollIntoView({behavior:'smooth',block:'start'});}};
   $('repeatQuestion').onclick=resetAttempt;

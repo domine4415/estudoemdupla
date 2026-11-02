@@ -25,6 +25,7 @@ function normalize(q){
   const providedId=q.originalId??q.metadata?.originalId??q.id;
   const originalId=/^\d{3,20}$/.test(String(providedId??''))?String(providedId):'';
   return {
+    isOriginal:q.isOriginal===true||q.inedita===true,isOutdated:q.isOutdated===true||q.desatualizada===true,
     statement, alternatives, type:q.type==='true_false'?'true_false':'multiple_choice',
     correct:normalizedCorrect,
     commentary:trimmed(q.commentary||q.explanation||q.comentario,12000),
@@ -85,12 +86,15 @@ module.exports=function createBankApi({databaseRequest,parseJson,send,err,isAdmi
       return send(res,200,d);
     }
     if(op==='questions'&&req.method==='GET'){
+      if(trimmed(url.searchParams.get('topic'),180)&&!trimmed(url.searchParams.get('subject'),180))return err(res,400,'Escolha uma disciplina antes de selecionar o assunto.');
       const page=Math.min(1000,Math.max(1,Number.parseInt(url.searchParams.get('page')||'1',10)||1));
       const p=new URLSearchParams({select:'id,subject,topic,board,exam_year,statement,has_key,has_commentary,data',published:'eq.true',order:'created_at.desc',limit:String(MAX_PAGE+1),offset:String((page-1)*MAX_PAGE)});
       for(const [field,column,max] of [['subject','subject',180],['topic','topic',180],['board','board',120],['year','exam_year',4]]){
         const value=trimmed(url.searchParams.get(field),max);
         if(value)p.set(column,field==='topic'?topicFilter(value):'eq.'+value);
       }
+      if(url.searchParams.get('excludeOutdated')==='true')p.set('or','(data->>isOutdated.is.null,data->>isOutdated.eq.false)');
+      if(url.searchParams.get('onlyOriginal')==='true')p.set('data->>isOriginal','eq.true');
       const search=trimmed(url.searchParams.get('search'),70);
       if(search){ // Usar filtro da coluna simples, sem expor o JSON de respostas.
         const escaped=search.replace(/[%,()*]/g,' ').trim();
@@ -136,8 +140,8 @@ module.exports=function createBankApi({databaseRequest,parseJson,send,err,isAdmi
       return send(res,200,{choice,isCorrect,correct:q.correct,commentary:q.commentary||'',
         alternatives:q.alternatives});
     }
-    if(op==='statistics'&&req.method==='GET'){
-      const qp=new URLSearchParams({select:'id,subject,topic',published:'eq.true',order:'id'});
+    if((op==='statistics'||op==='progress')&&req.method==='GET'){
+      const qp=new URLSearchParams({select:'id,subject,topic,board,statement',published:'eq.true',order:'id'});
       for(const field of ['subject','topic','board']){
         const value=trimmed(url.searchParams.get(field),180);
         if(value)qp.set(field,field==='topic'?topicFilter(value):'eq.'+value);
@@ -152,19 +156,23 @@ module.exports=function createBankApi({databaseRequest,parseJson,send,err,isAdmi
         const result=[];params.set('limit','1000');
         for(let offset=0;;offset+=1000){params.set('offset',String(offset));const batch=await json(table+'?'+params);result.push(...batch);if(batch.length<1000)return result;}
       }
-      const [questions,history]=await Promise.all([allRows('dupla_bank_questions',qp),allRows('dupla_bank_attempts',ap)]);
+      const rp=new URLSearchParams({select:'room_code,question_key,is_correct,answered_at,subject,topic,board',user_id:'eq.'+user.id,order:'answered_at.desc,room_code,question_key'});for(const value of ap.getAll('answered_at'))rp.append('answered_at',value);
+      const [questions,history,roomHistory]=await Promise.all([allRows('dupla_bank_questions',qp),allRows('dupla_bank_attempts',ap),allRows('policial_room_answers',rp)]);
       const ids=new Set(questions.map(q=>q.id));
       const attempts=history.filter(a=>ids.has(a.question_id));
       const latest=new Map();for(const a of attempts)if(!latest.has(a.question_id))latest.set(a.question_id,a);
       const groups=new Map();
-      for(const q of questions){let g=groups.get(q.subject);if(!g){g={subject:q.subject,total:0,answered:0,correct:0,wrong:0};groups.set(q.subject,g);}g.total++;
+      for(const q of questions){if(!latest.has(q.id))continue;let g=groups.get(q.subject);if(!g){g={subject:q.subject,total:0,answered:0,correct:0,wrong:0};groups.set(q.subject,g);}g.total++;
         const a=latest.get(q.id);if(a){g.answered++;if(a.is_correct)g.correct++;else g.wrong++;}}
-      return send(res,200,{total:questions.length,answered:[...groups.values()].reduce((n,g)=>n+g.answered,0),correct:[...groups.values()].reduce((n,g)=>n+g.correct,0),wrong:[...groups.values()].reduce((n,g)=>n+g.wrong,0),attempts:attempts.length,subjects:[...groups.values()].sort((a,b)=>a.subject.localeCompare(b.subject,'pt-BR'))});
-    }
-    if(op==='progress'&&req.method==='GET'){
-      // Visão da tentativa MAIS RECENTE de cada questão.
-      const data=await json('rpc/dupla_bank_progress',{method:'POST',body:JSON.stringify({target_user:user.id})});
-      return send(res,200,data);
+      const byHash=new Map(questions.filter(q=>q.statement).map(q=>[crypto.createHash('sha256').update(q.statement).digest('hex'),q]));
+      let roomCount=0;
+      for(const answer of roomHistory){
+        const meta=answer.subject?answer:byHash.get(answer.question_key)||answer;
+        const selectedSubject=trimmed(url.searchParams.get('subject'),180),selectedTopic=trimmed(url.searchParams.get('topic'),180),selectedBoard=trimmed(url.searchParams.get('board'),180);
+        if(selectedSubject&&meta.subject!==selectedSubject||selectedTopic&&normalizeTopic(meta.topic)!==normalizeTopic(selectedTopic)||selectedBoard&&meta.board!==selectedBoard)continue;
+        const subject=meta.subject||'Não classificada';let group=groups.get(subject);if(!group){group={subject,total:0,answered:0,correct:0,wrong:0};groups.set(subject,group);}group.answered++;group.total++;if(answer.is_correct)group.correct++;else group.wrong++;roomCount++;
+      }
+      return send(res,200,{total:questions.length,answered:[...groups.values()].reduce((n,g)=>n+g.answered,0),correct:[...groups.values()].reduce((n,g)=>n+g.correct,0),wrong:[...groups.values()].reduce((n,g)=>n+g.wrong,0),attempts:attempts.length+roomCount,roomAnswered:roomCount,subjects:[...groups.values()].sort((a,b)=>a.subject.localeCompare(b.subject,'pt-BR'))});
     }
     if(op!=='admin')return err(res,404,'Rota do banco não encontrada.');
     if(!isAdmin(user))return err(res,403,'Somente o administrador pode gerenciar questões.');

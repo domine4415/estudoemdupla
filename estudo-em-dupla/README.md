@@ -162,3 +162,35 @@ O dono pode definir, trocar ou remover a senha em Editar senha da sala, sem desc
 Solicitações de amizade e convites mostram contador vermelho nos acessos da comunidade e nas abas correspondentes. Um novo aviso aparece dentro do site e toca um som curto, após a primeira interação com a página liberar o áudio. Os eventos são enviados por conexão persistente, com verificação a cada 10 segundos como alternativa. Esse aviso é do site aberto, não uma notificação do sistema com o navegador fechado.
 
 Para atualizar, publique rooms-api.js, community-api.js e a pasta public atualizada. Não exige novo SQL em relação à versão da Comunidade.
+
+
+### Atualização de exibição e embaralhamento nas salas
+
+Comunidade aparece por último na navegação. Os itens laterais ganham brilho ao passar o mouse ou receber foco. As escolhas dos participantes são mostradas somente na lista Ao vivo; foram removidas a cópia dessas escolhas abaixo da questão e as mensagens redundantes de Informações da sala.
+
+A correção agora é exibida para todos após a revelação: gabarito e comentário da questão, quando disponíveis. Antes disso, esses campos continuam ausentes, inclusive para o dono. A lista interna de questões do dono também não inclui o gabarito. Os contadores C (acertos) e X (erros) ao lado do participante somam somente questões já reveladas do conjunto atual.
+
+Ao carregar um conjunto do banco, a ordem das questões e as alternativas são embaralhadas no servidor, uma vez para toda a sala, sem alterar as questões originais do banco. A letra correta acompanha o texto da alternativa após a reorganização. Certo/errado mantém suas letras semânticas C/E. Opções que dependem de ordem ou referências a outras alternativas são preservadas. A ordem fica salva junto da sala. Para aplicar às salas que já possuem questões, carregue novamente o conjunto.
+
+Publique rooms-api.js, o novo room-questions.js e a pasta public atualizada. Não precisa de SQL novo.
+
+
+### Estatísticas incluindo respostas das salas
+
+Execute COMUNIDADE_SQL.sql atualizado para adicionar matéria, tópico e banca ao registro de respostas das salas. Publique bank-api.js, community-api.js e public/bank.html. O resumo e as estatísticas passam a somar o banco individual e as salas. O banco usa a última resposta por questão no período; cada sala contribui com a primeira resposta por questão, sem contar reenvios. Filtros de data, matéria, tópico e banca se aplicam às duas origens. Registros antigos de salas usam a classificação da questão correspondente no banco quando ela ainda está disponível; sem correspondência, aparecem como Não classificada no total sem filtros.
+
+
+### Chat recolhível da sala
+
+O botão Chat abre o histórico da sala. Quando fechado, uma nova mensagem de outra pessoa aparece por 6,5 segundos num balão, com nome e texto, e incrementa o contador de não lidas. Abrir o chat zera o contador. As últimas 100 mensagens são salvas no estado da sala no Supabase, com até 1.000 caracteres por mensagem. O envio atualiza a atividade da sala. Somente participantes atuais têm acesso; ao sair ou ser expulso, o chat é fechado e deixa de receber mensagens. O texto é mostrado sem executar HTML.
+
+Publique server.js, rooms-api.js e a pasta public atualizada, incluindo room-chat.js e room-chat.css. Não exige SQL novo.
+
+
+### Filtros avançados para carregar questões nas salas
+
+O dono pode combinar disciplina e assunto com banca, ano, tipo (certo/errado ou múltipla escolha), excluir desatualizadas e somente inéditas. Histórico: todas, não resolvidas pelo dono, não resolvidas nesta sala, ou não resolvidas por um participante atual escolhido pelo nome. O histórico de uma pessoa combina banco individual e respostas das salas. O histórico da sala considera qualquer resposta registrada nela, inclusive em conjuntos carregados anteriormente. O servidor valida que a pessoa selecionada ainda pertence à sala e não retorna o histórico detalhado aos outros participantes.
+
+As marcações de inédita e desatualizada são editoriais: ficam no editor administrativo da questão e também podem vir do JSON pelos campos booleanos isOriginal/inedita e isOutdated/desatualizada. “Somente inéditas” não significa “ainda não resolvidas”: só inclui questões explicitamente classificadas. “Remover desatualizadas” exclui as marcadas como tal. Questões antigas sem marcação de inédita ficam fora desse filtro. As duas opções também estão nos filtros do banco individual.
+
+A seleção procura questões elegíveis além da primeira página do banco até preencher o limite ou esgotar os resultados; o conjunto selecionado continua sendo embaralhado. Publique rooms-api.js, o novo room-bank-filter.js, bank-api.js e a pasta public atualizada. Não exige SQL novo, pois as classificações usam o JSON já armazenado nas questões e o histórico existente.

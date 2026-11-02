@@ -13,7 +13,7 @@ function fixture(overrides={}){
  async function call(path,user='owner',body,method=body?'POST':'GET'){const res={};await api.handle({method,body},res,new URL('http://local/api/'+path),{id:user});return res;}
  return {rooms,saved,api,call};
 }
-test('qualquer conta cria, protege com senha, define capacidade e mantém gabarito fora da sala',async()=>{
+test('qualquer conta cria, protege com senha, define capacidade e oculta gabarito até a revelação',async()=>{
  const {call,rooms}=fixture();const created=await call('room','owner',{name:'Dono',maxParticipants:3,access:'password',password:'1234'});assert.equal(created.status,201);const code=created.data.code;assert.match(code,/^[A-Z0-9]{6}$/);assert.notEqual(rooms.get(code).passwordHash,'1234');
  assert.equal((await call(`room/${code}/join`,'p1',{password:'errada'})).status,403);
  const joins=await Promise.all(['p1','p2','p3'].map(id=>call(`room/${code}/join`,id,{name:id,password:'1234'})));assert.equal(joins.filter(r=>r.status===200).length,2);assert.equal(joins.filter(r=>r.status===409).length,1);
@@ -21,7 +21,7 @@ test('qualquer conta cria, protege com senha, define capacidade e mantém gabari
  for(const who of ['owner','p1','p2']){const result=await call(`room/${code}/state`,who);assert.equal(result.data.question.correct,undefined);assert.equal(result.data.question.commentary,undefined);assert.equal(result.data.participants.length,3);if(who==='owner')assert.equal(result.data.questions[0].correct,undefined);}
  for(const action of ['key','edit','import'])assert.equal((await call(`room/${code}/${action}`,'owner',{questions:[]})).status,403);
  assert.equal((await call(`room/${code}/navigate`,'p1',{index:0})).status,403);
- await call(`room/${code}/answer`,'owner',{index:0,choice:'A'});await call(`room/${code}/answer`,'p1',{index:0,choice:'B'});assert.equal((await call(`room/${code}/state`,'owner')).data.revealed,false);await call(`room/${code}/answer`,'p2',{index:0,choice:'A'});const state=(await call(`room/${code}/state`,'owner')).data;assert.equal(state.revealed,true);assert.equal(state.question.correct,undefined);assert.equal(state.question.commentary,undefined);
+ await call(`room/${code}/answer`,'owner',{index:0,choice:'A'});await call(`room/${code}/answer`,'p1',{index:0,choice:'B'});assert.equal((await call(`room/${code}/state`,'owner')).data.revealed,false);await call(`room/${code}/answer`,'p2',{index:0,choice:'A'});const state=(await call(`room/${code}/state`,'owner')).data;assert.equal(state.revealed,true);assert.equal(state.question.correct,rooms.get(code).questions[0].correct);assert.equal(state.question.commentary,rooms.get(code).questions[0].commentary);assert.ok(state.participants.every(p=>p.correctCount+p.wrongCount===1));
  await call(`room/${code}/leave`,'p1',{});assert.equal((await call(`room/${code}/join`,'p3',{password:'1234'})).status,200);
 });
 test('inatividade encerra a sala e persiste o encerramento',async()=>{
@@ -29,7 +29,7 @@ test('inatividade encerra a sala e persiste o encerramento',async()=>{
 });
 
 test('troféus usam a primeira resposta conferida no servidor, sem duplicar envios',async()=>{
- const awards=[];const {call}=fixture({recordAnswer:async(...args)=>awards.push(args)});const created=await call('room','owner',{maxParticipants:3});const code=created.data.code;await call(`room/${code}/from-bank`,'owner',{});await call(`room/${code}/answer`,'owner',{index:0,choice:'B',correct:true});assert.equal(awards.length,1);assert.equal(awards[0][3],false);assert.equal((await call(`room/${code}/answer`,'owner',{index:0,choice:'A'})).status,409);assert.equal(awards.length,1);
+ const awards=[];const {call,rooms}=fixture({recordAnswer:async(...args)=>awards.push(args)});const created=await call('room','owner',{maxParticipants:3});const code=created.data.code;await call(`room/${code}/from-bank`,'owner',{});const wrong=rooms.get(code).questions[0].alternatives.find(a=>a.letter!==rooms.get(code).questions[0].correct).letter;await call(`room/${code}/answer`,'owner',{index:0,choice:wrong,correct:true});assert.equal(awards.length,1);assert.equal(awards[0][3],false);assert.equal((await call(`room/${code}/answer`,'owner',{index:0,choice:'A'})).status,409);assert.equal(awards.length,1);
 });
 test('somente o dono altera a senha, sem desconectar participantes existentes',async()=>{
  const {call,rooms}=fixture();const created=await call('room','owner',{maxParticipants:4});const code=created.data.code;await call(`room/${code}/join`,'p1',{});
@@ -44,4 +44,13 @@ test('dono expulsa, libera vaga, corta eventos e permite reentrada',async()=>{
  const events=[];let ended=false;const client={roomUserId:'p1',write:event=>events.push(event),end:()=>ended=true};rooms.get(code).clients.add(client);
  assert.equal((await call(`room/${code}/kick`,'owner',{userId:'p1'})).status,200);assert.equal(ended,true);assert.ok(events.some(e=>e.includes('expelled')));assert.equal(rooms.get(code).members.length,2);
  assert.equal((await call(`room/${code}/state`,'p1')).status,403);assert.equal((await call(`room/${code}/join`,'p1',{})).status,200);assert.equal((await call(`room/${code}/join`,'p3',{})).status,409);
+});
+test('chat fica restrito aos participantes, persiste texto e envia evento em tempo real',async()=>{
+ const {call,rooms,saved}=fixture();const created=await call('room','owner',{name:'Dono',maxParticipants:3});const code=created.data.code;await call(`room/${code}/join`,'p1',{name:'Pessoa'});
+ assert.equal((await call(`room/${code}/chat`,'outsider')).status,403);assert.equal((await call(`room/${code}/chat`,'outsider',{text:'Mensagem'})).status,403);
+ const events=[];rooms.get(code).clients.add({roomUserId:'p1',write:event=>events.push(event)});
+ const sent=await call(`room/${code}/chat`,'owner',{text:'<script>alert(1)</script> Olá!'});assert.equal(sent.status,200);assert.equal(sent.data.message.name,'Dono');assert.equal(saved.get(code).messages.length,1);assert.ok(events.some(s=>s.includes('event: chat')));
+ const history=await call(`room/${code}/chat`,'p1');assert.equal(history.data.messages[0].text,'<script>alert(1)</script> Olá!');assert.equal(history.data.messages[0].token,undefined);
+ assert.equal((await call(`room/${code}/chat`,'owner',{text:'Outra mensagem'})).status,429);assert.equal((await call(`room/${code}/chat`,'p1',{text:'x'.repeat(1001)})).status,400);
+ await call(`room/${code}/kick`,'owner',{userId:'p1'});assert.equal((await call(`room/${code}/chat`,'p1')).status,403);
 });

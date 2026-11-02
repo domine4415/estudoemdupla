@@ -7,8 +7,9 @@
 <title>ESTUDO POLICIAL • Preparação para carreiras policiais</title>
 <link rel="stylesheet" href="/styles.css" />
 <script src="/room-voice.js" defer></script>
+<link rel="stylesheet" href="/room-chat.css"><script src="/room-chat.js" defer></script>
 <script src="/app.js" defer></script>
-<link rel="stylesheet" href="/navigation.css"><script src="/navigation.js" defer></script><script src="/presence.js" defer></script></head>
+<link rel="stylesheet" href="/navigation.css"><script src="/navigation.js" defer></script><script src="/presence.js" defer></script><link rel="stylesheet" href="/searchable-select.css"><script src="/searchable-select.js" defer></script></head>
 <body>
 <header class="topbar">
   <div class="brand"><span class="brand-mark"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 4 6v6c0 5 8 9 8 9s8-4 8-9V6z"/><path d="m8.5 12 2.3 2.3 4.7-4.8"/></svg></span><span>ESTUDO<span class="brand-secondary"> POLICIAL</span></span></div>
@@ -82,8 +83,14 @@
         <div id="dropZone" class="drop-zone hidden" tabindex="0"><span class="upload-icon">⇧</span><strong>Importar questões</strong><span>Arraste seu arquivo JSON ou clique aqui</span><small>Enunciados e alternativas serão organizados automaticamente</small><input id="jsonFile" type="file" accept=".json,application/json" aria-label="Selecionar arquivo JSON"></div>
         <div class="room-bank-import">
           <strong>Escolher questões do banco</strong>
-          <label for="bankRoomSubject">Disciplina</label><select id="bankRoomSubject"><option value="">Todas</option></select>
-          <label for="bankRoomTopic">Assunto</label><select id="bankRoomTopic"><option value="">Todos</option></select>
+          <label for="bankRoomSubject">Disciplina</label><select id="bankRoomSubject" data-searchable="Digite o nome da disciplina"><option value="">Todas</option></select>
+          <label for="bankRoomTopic">Assunto</label><select id="bankRoomTopic" data-searchable="Digite o nome do assunto" disabled><option value="">Escolha uma disciplina primeiro</option></select>
+          <label for="bankRoomHistory">Histórico de resolução</label><select id="bankRoomHistory"><option value="all">Todas as questões</option><option value="owner">Não resolvidas pelo dono da sala</option><option value="room">Não resolvidas nesta sala</option><option value="participant">Não resolvidas por um participante</option></select>
+          <label for="bankRoomParticipant">Participante</label><select id="bankRoomParticipant" disabled><option value="">Escolha o filtro por participante</option></select>
+          <label for="bankRoomBoard">Banca</label><select id="bankRoomBoard" data-searchable="Digite o nome da banca"><option value="">Todas as bancas</option></select>
+          <label for="bankRoomYear">Ano</label><select id="bankRoomYear"><option value="">Todos os anos</option></select>
+          <label for="bankRoomType">Modo de questão</label><select id="bankRoomType"><option value="">Todos os modos</option><option value="true_false">Certo ou errado</option><option value="multiple_choice">Múltipla escolha (A, B, C, D, E)</option></select>
+          <label class="room-filter-check"><input id="bankRoomExcludeOutdated" type="checkbox"> Remover desatualizadas</label><label class="room-filter-check"><input id="bankRoomOnlyOriginal" type="checkbox"> Somente questões inéditas</label>
           <label for="bankRoomLimit">Quantidade de questões</label><input type="number" id="bankRoomLimit" min="1" max="200" value="50">
           <button id="importFromBank" class="btn btn-soft btn-full" type="button">Carregar do banco →</button>
         </div>
@@ -118,9 +125,6 @@
     </section>
     <aside class="stats panel"><div class="eyebrow">RESPOSTAS DA EQUIPE</div><h2>Ao vivo</h2>
       <div id="roomParticipants"></div>
-      <div class="mini-divider"></div>
-      <div class="stats-note" id="resultExplanation">Cada pessoa marca sua resposta sem ver a escolha da outra. Quando os dois responderem, as escolhas aparecem.</div>
-      <div class="stats-bottom"><div class="eyebrow">INFORMAÇÕES DA SALA</div><div id="scoreDetail" class="tiny muted">A pontuação aparece quando houver gabarito e respostas reveladas.</div></div>
     </aside>
   </div>
 </main>
@@ -133,5 +137,6 @@
   </form>
 </dialog>
 <dialog id="roomSettingsDialog" class="modal"><div class="modal-title"><h2>Senha da sala</h2><button id="closeRoomSettings" class="btn btn-soft" type="button">Fechar</button></div><form id="roomSettingsForm"><label for="settingsAccess">Entrada na sala</label><select id="settingsAccess"><option value="open">Aberta (remover senha)</option><option value="password">Definir ou trocar senha</option></select><label for="settingsPassword">Nova senha</label><input id="settingsPassword" type="password" minlength="4" maxlength="100" autocomplete="new-password"><p>Quem já está na sala continua conectado. A alteração vale para as próximas entradas.</p><button id="saveRoomSettings" class="btn btn-primary" type="submit">Salvar alteração</button><p id="settingsStatus" role="status"></p></form></dialog>
+<aside id="roomChatDock" class="room-chat-dock" hidden aria-label="Chat da sala"><button id="roomChatBalloon" class="room-chat-balloon" hidden type="button" aria-label="Abrir a última mensagem"><strong id="roomChatBalloonName"></strong><span id="roomChatBalloonText"></span></button><section id="roomChatPanel" class="room-chat-panel" hidden><header class="room-chat-header"><strong>Chat da sala</strong><button id="roomChatClose" type="button" aria-label="Recolher chat">×</button></header><div id="roomChatMessages" class="room-chat-messages" role="log" aria-live="polite" aria-label="Mensagens da sala"></div><form id="roomChatForm" class="room-chat-form"><textarea id="roomChatInput" rows="1" maxlength="1000" required placeholder="Escreva uma mensagem..." aria-label="Mensagem"></textarea><button id="roomChatSend" class="btn btn-primary" type="submit">Enviar</button></form><p id="roomChatStatus" class="room-chat-status" role="status"></p></section><button id="roomChatToggle" class="room-chat-toggle" type="button" aria-controls="roomChatPanel" aria-expanded="false">Chat <span id="roomChatCount" class="room-chat-count" hidden>0</span></button></aside>
 </body>
 </html>

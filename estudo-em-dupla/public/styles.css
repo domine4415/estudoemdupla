@@ -93,3 +93,7 @@ body{background:radial-gradient(ellipse 55% 35% at 53% 0%,rgba(59,120,102,.12),t
 @media(prefers-reduced-motion:reduce){.is-speaking .voice-wave i{animation:none;height:18px}}
 
 #roomParticipants .room-kick{grid-column:2/4;justify-self:start;font-size:10px;padding:5px 8px;margin-top:5px;color:#f4b9b9}
+
+#roomParticipants .room-answer-counts{grid-column:2/4;display:flex;gap:12px;font:750 12px/1.6 system-ui}#roomParticipants .room-answer-counts span:first-child{color:#a2efb5}#roomParticipants .room-answer-counts span:last-child{color:#f3a9a9}
+
+.room-bank-import .room-filter-check{display:flex;align-items:center;gap:9px;line-height:1.6;margin-top:14px}.room-filter-check input{width:17px;height:17px;flex:0 0 17px;accent-color:#a2efb5}

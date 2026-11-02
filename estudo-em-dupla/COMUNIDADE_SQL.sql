@@ -37,18 +37,22 @@ create table if not exists public.policial_room_answers (
  answered_at timestamptz not null default now(),
  primary key(user_id,room_code,question_key)
 );
+alter table public.policial_room_answers add column if not exists subject text not null default '';
+alter table public.policial_room_answers add column if not exists topic text not null default '';
+alter table public.policial_room_answers add column if not exists board text not null default '';
 create table if not exists public.policial_trophies (
  user_id uuid not null references public.policial_profiles(user_id) on delete cascade,
  trophy_key text not null,
  earned_at timestamptz not null default now(),
  primary key(user_id,trophy_key)
 );
-create or replace function public.policial_record_room_answer(p_user uuid,p_room text,p_question text,p_correct boolean)
+drop function if exists public.policial_record_room_answer(uuid,text,text,boolean);
+create or replace function public.policial_record_room_answer(p_user uuid,p_room text,p_question text,p_correct boolean,p_subject text default '',p_topic text default '',p_board text default '')
 returns void language plpgsql security definer set search_path=public as $$
 declare added integer; p policial_profiles%rowtype;
 begin
  perform pg_advisory_xact_lock(hashtextextended(p_user::text,0));
- insert into policial_room_answers(user_id,room_code,question_key,is_correct) values(p_user,p_room,p_question,p_correct) on conflict do nothing;
+ insert into policial_room_answers(user_id,room_code,question_key,is_correct,subject,topic,board) values(p_user,p_room,p_question,p_correct,p_subject,p_topic,p_board) on conflict do nothing;
  get diagnostics added=row_count;if added=0 then return;end if;
  update policial_profiles set answered=answered+1,correct=correct+case when p_correct then 1 else 0 end,
  streak=case when p_correct then streak+1 else 0 end,
@@ -58,8 +62,8 @@ begin
  select p_user,key from (values ('primeira',p.answered>=1),('cem',p.answered>=100),('mil',p.answered>=1000),('sequencia10',p.best_streak>=10),('sequencia20',p.best_streak>=20)) as awards(key,earned)
  where earned on conflict do nothing;
 end;$$;
-revoke all on function public.policial_record_room_answer(uuid,text,text,boolean) from public,anon,authenticated;
-grant execute on function public.policial_record_room_answer(uuid,text,text,boolean) to service_role;
+revoke all on function public.policial_record_room_answer(uuid,text,text,boolean,text,text,text) from public,anon,authenticated;
+grant execute on function public.policial_record_room_answer(uuid,text,text,boolean,text,text,text) to service_role;
 alter table public.policial_profiles enable row level security;
 alter table public.policial_friendships enable row level security;
 alter table public.policial_invitations enable row level security;

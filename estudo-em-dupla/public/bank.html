@@ -7,7 +7,7 @@
 <link rel="stylesheet" href="/styles.css"><link rel="stylesheet" href="/bank.css">
 <script src="/bank.js" defer></script>
 <script src="/math-support.js" defer></script>
-<link rel="stylesheet" href="/navigation.css"><script src="/navigation.js" defer></script><script src="/presence.js" defer></script></head>
+<link rel="stylesheet" href="/navigation.css"><script src="/navigation.js" defer></script><script src="/presence.js" defer></script><link rel="stylesheet" href="/searchable-select.css"><script src="/searchable-select.js" defer></script></head>
 <body>
 <button id="mobileMenu" class="mobile-menu" type="button" aria-label="Abrir navegação" aria-controls="sideNav" aria-expanded="false"><span class="hamburger-lines"></span></button>
 <nav id="sideNav" class="side-nav" aria-label="Navegação principal">
@@ -30,7 +30,6 @@
       <button id="adminToggle" class="btn btn-soft hidden" type="button">Gerenciar questões</button>
    </div>
    <div class="bank-stats">
-      <div class="bank-stat"><strong id="statTotal">—</strong><span>Questões disponíveis</span></div>
       <div class="bank-stat"><strong id="statAnswered">—</strong><span>Questões respondidas</span></div>
       <div class="bank-stat"><strong id="statCorrect">—</strong><span>Últimas respostas certas</span></div>
       <div class="bank-stat"><strong id="statWrong">—</strong><span>Últimas respostas erradas</span></div>
@@ -39,12 +38,13 @@
       <aside class="panel bank-filter">
         <div class="eyebrow">PERSONALIZAR ESTUDO</div><h2>Filtros</h2>
         <label for="filterSearch">Buscar no enunciado</label><input id="filterSearch" placeholder="Ex.: abuso de autoridade" maxlength="70">
-        <label for="filterSubject">Disciplina</label><select id="filterSubject"><option value="">Todas as disciplinas</option></select>
-        <label for="filterTopic">Tópico / Assunto</label><select id="filterTopic"><option value="">Todos os tópicos</option></select>
+        <label for="filterSubject">Disciplina</label><select id="filterSubject" data-searchable="Digite o nome da disciplina"><option value="">Todas as disciplinas</option></select>
+        <label for="filterTopic">Tópico / Assunto</label><select id="filterTopic" data-searchable="Digite o nome do assunto" disabled><option value="">Todos os tópicos</option></select>
         <label for="filterBoard">Banca</label><select id="filterBoard"><option value="">Todas as bancas</option></select>
         <label for="filterYear">Ano</label><select id="filterYear"><option value="">Todos os anos</option></select>
         <label for="filterStatus">Situação</label><select id="filterStatus"><option value="">Todas as questões</option><option value="unanswered">Não resolvidas</option><option value="answered">Já resolvidas</option></select>
         <label for="filterType">Tipo de questão</label><select id="filterType"><option value="">Todos os tipos</option><option value="true_false">Certo ou errado</option><option value="multiple_choice">Múltipla escolha</option></select>
+        <label class="rights-line"><input id="filterExcludeOutdated" type="checkbox"><span>Remover desatualizadas</span></label><label class="rights-line"><input id="filterOnlyOriginal" type="checkbox"><span>Somente inéditas</span></label>
         <button id="applyFilter" class="btn btn-primary btn-full">Buscar questões →</button>
         <button id="clearFilter" class="btn btn-soft btn-full">Limpar filtros</button>
         <p class="filter-note">O gabarito e o comentário aparecem após você responder. Seu histórico fica salvo na sua conta.</p>
@@ -74,7 +74,7 @@
        <div><label for="statsEnd">Respondidas até</label><input id="statsEnd" type="date"></div>
        <div class="stats-filter-actions"><button id="statsApply" class="btn btn-primary" type="submit">Aplicar filtros</button><button id="statsClear" class="btn btn-soft" type="button">Limpar</button></div>
      </form>
-     <p class="bank-note">O período considera a data das respostas, no horário de Brasília, incluindo o dia final. Acertos e erros usam a última resposta de cada questão dentro do período. Questões disponíveis considera os filtros de matéria, tópico e banca.</p>
+     <p class="bank-note">O período considera a data das respostas, no horário de Brasília, incluindo o dia final. Inclui o banco individual e as salas. No banco, considera a última resposta por questão no período; nas salas, a primeira resposta de cada questão por sala. O desempenho é a proporção de acertos entre as questões respondidas; matérias sem respostas não entram na lista.</p>
      <div id="statsSummary" class="bank-stats" role="status"></div><h3>Desempenho por disciplina</h3><div id="statsSubjects" class="stats-subjects"></div>
    </section>
    <section id="adminPane" class="hidden bank-admin panel">
@@ -125,6 +125,7 @@
   <label for="editCorrect">Gabarito</label><select id="editCorrect"><option value="">Ainda não verificado (rascunho)</option></select>
   <label for="editCommentary">Comentário explicativo — aceita Markdown: **negrito**, ==grifo==, ## título</label><textarea id="editCommentary" rows="7" placeholder="Explique por que a alternativa correta é correta e as demais não são..."></textarea>
   <p class="bank-note">Formatação: <code>**negrito**</code> • <code>==grifo==</code> • <code>## Título</code> • <code>__sublinhado__</code>. O texto é exibido com segurança, sem executar HTML.</p>
+  <label class="rights-line"><input type="checkbox" id="editOriginal"><span>Questão inédita (classificação do conteúdo, não do histórico do usuário)</span></label><label class="rights-line"><input type="checkbox" id="editOutdated"><span>Questão desatualizada</span></label>
   <label class="rights-line"><input type="checkbox" id="editPublished"><span>Publicar para os alunos (exige gabarito)</span></label>
   <div class="editor-actions"><button id="deleteQuestion" type="button" class="btn btn-outline">Excluir</button><button type="submit" class="btn btn-primary">Salvar questão</button></div>
  </form>
