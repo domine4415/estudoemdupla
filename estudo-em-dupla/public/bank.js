@@ -378,7 +378,7 @@ async function showStats(){
 async function boot(){
   try{
     const session=await api('auth/me');if(!session.authenticated){$('loginRequired').classList.remove('hidden');return;}
-    admin=!!session.isAdmin;$('createRoomNav').classList.remove('hidden');$('pageBody').classList.remove('hidden');$('who').textContent=(admin?'ADMIN • ':'')+session.user?.email;
+    admin=!!session.isAdmin;$('createRoomNav').classList.remove('hidden');$('pageBody').classList.remove('hidden');$('who').replaceChildren();const profileLink=elt('a','','Perfil');profileLink.href='/comunidade#meu-perfil';$('who').append(profileLink);
     $('adminToggle').classList.toggle('hidden',!admin);
   }catch(e){$('loginRequired').classList.remove('hidden');return;}
   $('statsToggle').onclick=async()=>{showStats();document.getElementById('sideNav').classList.remove('open');document.getElementById('menuShade').hidden=true;};

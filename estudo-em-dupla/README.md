@@ -146,3 +146,8 @@ Amizades exigem solicitação e aceitação. É possível cancelar, recusar e de
 Troféus iniciais: primeira questão, 100 questões, 1.000 questões, 10 acertos seguidos e 20 acertos seguidos em salas. A contagem começa após ativar esta atualização; não reconstrói respostas antigas. A mesma questão na mesma sala conta uma vez, considerando a primeira resposta. Questões em salas diferentes contam como novas participações. A verificação é feita no servidor, usando o gabarito interno, sem enviar a resposta correta ao navegador. Uma função transacional no banco impede contagens duplicadas e mantém as sequências entre salas. Sem gabarito interno, a questão não gera conquista. Os totais são de todas as salas, não de uma única sala.
 
 Verificação das regras de salas e comunidade: `node --test tests/rooms-api.test.cjs tests/community-api.test.cjs`.
+
+
+### Home e navegação das salas
+
+A Home concentra os cartões de acesso e os botões Perfil e Sair da conta. Sem e-mail exibido, sem barra extra de navegação e sem formulários ou listagem de salas nessa tela. Salas ao vivo abre /?view=salas; Criar sala abre /?action=criar. O nome do participante vem do perfil e não pode ser alterado no formulário da sala; para mudar, use Meu perfil. O servidor usa o perfil autenticado mesmo que alguém tente enviar outro nome.

@@ -21,6 +21,10 @@
   function update(){
     const params=new URLSearchParams(location.search),workspace=document.getElementById('workspace');
     const home=['/','/index.html'].includes(location.pathname)&&!params.has('room')&&!params.has('view')&&!params.has('action')&&(!workspace||workspace.classList.contains('hidden'));
+    body.classList.toggle('is-home',home);
+    bar.hidden=home;back.hidden=home;
+    body.classList.toggle('is-room-directory',params.get('view')==='salas');
+    body.classList.toggle('is-room-create',params.get('action')==='criar');
     body.classList.toggle('has-app-sidebar',!existing&&!home);if(nav){nav.hidden=home;menu.hidden=home;if(home)close();}
     for(const link of nav?.querySelectorAll('.app-sidebar-link')||[]){const url=new URL(link.href);const active=location.pathname===url.pathname&&(url.pathname!=='/'||url.search===location.search);link.classList.toggle('is-active',active);if(active)link.setAttribute('aria-current','page');else link.removeAttribute('aria-current');}
   }

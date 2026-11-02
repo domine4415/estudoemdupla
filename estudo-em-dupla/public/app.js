@@ -73,10 +73,9 @@ async function refresh(){
 }
 async function command(action,data={}){try{await request('/'+action,'POST',{...credentials(),...data});await refresh();}catch(e){alertUser(e.message,true);}}
 async function createRoom(){if(!signedIn)return;try{
-  const name=$('hostName').value.trim()||'Participante';
   const title=$('roomName').value.trim();
   let r;
-  try{r=await fetch('/api/room',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,title,maxParticipants:Number($('roomCapacity').value),access:$('roomAccess').value,password:$('roomPassword').value})});}
+  try{r=await fetch('/api/room',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({title,maxParticipants:Number($('roomCapacity').value),access:$('roomAccess').value,password:$('roomPassword').value})});}
   catch(e){throw networkError(e);}
   if(!(r.headers.get('content-type')||'').includes('application/json'))throw Error('Não foi possível criar a sala: o site foi aberto sem o servidor Node.js. '+connectionHint());
   const v=await r.json();if(!r.ok)throw Error(v.error||'Erro ao criar sala.');
@@ -88,7 +87,7 @@ async function joinRoom(){if(!signedIn)return;try{
   const previousCode=code;
   code=c;
   let v;
-  try{v=await request('/join','POST',{name:$('joinName').value.trim()||'Participante',password:$('joinPassword').value});}
+  try{v=await request('/join','POST',{password:$('joinPassword').value});}
   catch(e){code=previousCode;throw e;}
   setSession(c,v.token,v.role||'guest');alertUser('Você entrou na sala!');
 }catch(e){alertUser(e.message,true);}}
@@ -456,7 +455,8 @@ async function verifyLogin(){
   $('joinCard').classList.remove('hidden');
   $('landingDescription').textContent='Crie sua sala ou entre em uma sala aberta para estudar com outras pessoas.';
   $('bankNavLink').classList.remove('hidden');
-  $('accountBar').classList.remove('hidden');$('accountEmail').textContent=(isAdminAccount?'ADMIN • ':'')+(result.user.email||'Minha conta');
+  $('accountBar').classList.remove('hidden');$('accountEmail').textContent='Perfil';
+  try{const response=await fetch('/api/community/me',{credentials:'same-origin',cache:'no-store'});const data=await response.json();if(response.ok){$('hostName').value=data.profile.name;$('joinName').value=data.profile.name;}}catch{}
   $('authPassword').value='';
   await initializeApp();
 }
@@ -489,8 +489,8 @@ async function boot(){
 boot();
 
 // Painel administrativo de criação: permanece fechado na página inicial.
-document.getElementById('openCreatePanel').addEventListener('click',()=>{const p=document.getElementById('createRoomPanel');p.classList.remove('hidden');document.getElementById('openCreatePanel').setAttribute('aria-expanded','true');p.scrollIntoView({behavior:'smooth',block:'center'});});
-document.getElementById('closeCreatePanel').addEventListener('click',()=>{document.getElementById('createRoomPanel').classList.add('hidden');document.getElementById('openCreatePanel').setAttribute('aria-expanded','false');});
+document.getElementById('openCreatePanel').addEventListener('click',()=>{if(new URLSearchParams(location.search).get('action')!=='criar'){location.href='/?action=criar';return;}const p=document.getElementById('createRoomPanel');p.classList.remove('hidden');document.getElementById('openCreatePanel').setAttribute('aria-expanded','true');p.scrollIntoView({behavior:'smooth',block:'center'});});
+document.getElementById('closeCreatePanel').addEventListener('click',()=>{location.href='/';});
 if(new URLSearchParams(location.search).get('action')==='criar'){window.addEventListener('load',()=>{let tries=0;const t=setInterval(()=>{const b=document.getElementById('openCreatePanel');if(b&&!b.classList.contains('hidden')){clearInterval(t);b.click();}if(++tries>35)clearInterval(t);},250);});}
 
 $('roomAccess').onchange=()=>{$('roomPassword').disabled=$('roomAccess').value!=='password';$('roomPassword').required=$('roomAccess').value==='password';};
