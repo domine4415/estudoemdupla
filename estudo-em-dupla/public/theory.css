@@ -51,6 +51,6 @@
 .lesson-paper .lesson-anchor{scroll-margin-top:28px}.lesson-paper .lesson-anchor:focus{outline:2px solid #77ab86;outline-offset:6px}
 @media print{.lesson-toc{display:none!important}.lesson-paper .lesson-anchor:focus{outline:none}}
 
-.lesson-card .contest-cover{display:block;width:100%;height:180px;object-fit:contain;background:#0c1625;border-radius:8px;margin-bottom:8px}.contest-cover[hidden]{display:none!important}#contestDialog label{display:block;margin:18px 0 8px;font-size:13px}#contestDialog .muted{font-size:12px;line-height:1.6}
+.lesson-card .contest-cover{display:block;align-self:center;width:calc(100% + 48px);max-width:none;aspect-ratio:16/9;height:auto;object-fit:cover;object-position:center;background:#0c1625;border-radius:14px 14px 0 0;margin:-24px -24px 8px;flex-shrink:0}.lesson-card:has(.contest-cover:not([hidden])){overflow:hidden}.contest-cover[hidden]{display:none!important}#contestDialog label{display:block;margin:18px 0 8px;font-size:13px}#contestDialog .muted{font-size:12px;line-height:1.6}
 
 .contest-choices{border:1px solid #34465d;border-radius:9px;padding:14px;margin:18px 0}.contest-choices legend{font-size:13px;color:#bdcce0}.theory-editor .contest-choice{display:flex;gap:10px;align-items:center;margin:10px 0}.contest-choice input{width:18px;height:18px;flex:0 0 18px;accent-color:#a2efb5}#editContest{max-height:240px;overflow-y:auto}
