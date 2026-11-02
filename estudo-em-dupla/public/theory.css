@@ -77,3 +77,4 @@
 .lesson-alternative-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px}.lesson-alternative-row .selected{border-color:#a2efb5;background:#214639}.lesson-alternative-row .eliminated{text-decoration:line-through;opacity:.5}.lesson-exercise-answers+.btn-primary{margin-top:18px}
 
 .lesson-alternative-row{grid-template-columns:minmax(0,1fr)}
+.lesson-paper .study-exemplo{background:#eef5fb;border:1px solid #bad1e2;border-left:4px solid #4d88b6;border-radius:12px;padding:20px 24px;margin:22px 0;break-inside:avoid;color:#253e51}.study-exemplo>.study-block-title{font:700 12px/1.5 system-ui;letter-spacing:1px;text-transform:uppercase;color:#326287;margin-bottom:12px}.study-exemplo>p:last-child{margin-bottom:0}
