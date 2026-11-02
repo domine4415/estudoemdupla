@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="pt-BR">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#090e19">
+<title>Teoria • ESTUDO POLICIAL</title><link rel="stylesheet" href="/styles.css"><link rel="stylesheet" href="/theory.css"><script src="/theory-highlights.js" defer></script><script src="/theory.js?v=20261101-compartilhar" defer></script><link rel="stylesheet" href="/navigation.css"><script src="/navigation.js" defer></script><script src="/presence.js" defer></script><script src="/page-motion.js" defer></script></head>
+<body>
+<main>
+<div class="theory-heading"><div><div class="eyebrow">BASE FORTE PARA A SUA APROVAÇÃO</div><h1>Central de <span>teoria.</span></h1><p>Aulas esquematizadas, organizadas por concurso, disciplina, tópico e subtópico.</p></div><button id="manageContests" class="btn btn-soft hidden" type="button">Gerenciar concursos</button><button id="newLesson" class="btn btn-primary hidden">+ Criar aula</button></div>
+<p id="notice" role="status"></p><a id="loginLink" class="hidden btn btn-primary" href="/">Entrar na conta</a>
+<section id="library" class="hidden">
+<form id="lessonFilters" class="panel theory-filters"><div hidden><label for="subject">Disciplina</label><select id="subject"><option value="">Todas as disciplinas</option></select></div><div hidden><label for="topic">Tópico</label><select id="topic"><option value="">Todos os tópicos</option></select></div><div><label for="search">Buscar aula</label><input id="search" type="search" placeholder="Título ou assunto"></div><button id="clearFilters" type="button" class="btn btn-soft">Limpar</button></form>
+<nav id="theoryBreadcrumbs" class="reader-actions" aria-label="Caminho na teoria"></nav>
+<p id="catalogCount" class="muted"></p><div id="lessonCards" class="lesson-cards"></div>
+</section>
+<section id="reader" class="hidden"><div class="reader-actions"><button id="back" class="btn btn-soft">← Voltar ao catálogo</button><button id="editLesson" class="btn btn-outline hidden">Editar aula</button><button id="printLesson" class="btn btn-soft">Imprimir / Salvar PDF</button></div>
+<div class="highlight-tools" hidden role="group" aria-label="Marca-texto pessoal"><strong>Grifar:</strong><button type="button" data-highlight="amarelo" class="highlight-yellow">Amarelo</button><button type="button" data-highlight="verde" class="highlight-green">Verde</button><button type="button" data-highlight="azul" class="highlight-blue">Azul</button><button type="button" data-highlight="remove">Remover grifo</button></div><p id="highlightStatus" role="status" aria-live="polite"></p>
+<details id="lessonToc" class="lesson-toc" hidden open><summary>Sumário da aula</summary><nav id="lessonTocLinks" aria-label="Sumário da aula"></nav></details>
+<article id="lessonPaper" class="lesson-paper"></article></section>
+<section id="editor" class="panel hidden theory-editor"><div class="reader-actions"><h2>Preparar aula</h2><button id="cancelEdit" class="btn btn-soft">Fechar editor</button></div>
+<form id="lessonForm"><fieldset class="contest-choices"><legend>Concursos desta aula</legend><div id="editContest"></div></fieldset><p class="muted">Marque todos os concursos que usam esta aula. O conteúdo é único: uma edição atualiza a aula em todos eles. Sem seleção, a aula fica em Conteúdo geral.</p><label for="title">Título da aula</label><input id="title" required maxlength="180" placeholder="Ex.: Uso do hífen: regras e exceções">
+<label for="editSubtopic">Subtópico (opcional)</label><input id="editSubtopic" maxlength="180" list="subtopicOptions" placeholder="Ex.: Sujeito (dentro de Sintaxe)"><datalist id="subtopicOptions"></datalist>
+<div class="theory-fields"><div><label for="editSubject">Disciplina</label><input id="editSubject" required maxlength="180" list="subjectOptions" placeholder="Ex.: Língua Portuguesa"><datalist id="subjectOptions"></datalist></div><div><label for="editTopic">Tópico</label><input id="editTopic" required maxlength="180" list="topicOptions" placeholder="Ex.: Uso do Hífen"><datalist id="topicOptions"></datalist></div></div>
+<p class="muted"><strong>Copie no ChatGPT e cole no campo abaixo (Ctrl+V).</strong> Títulos, listas, tabelas e quadros identificados na cópia são convertidos automaticamente. Você também pode colar uma imagem diretamente no conteúdo. Confira o resultado na prévia, sem precisar montar a aula bloco por bloco.</p>
+<details class="format-help"><summary>Ver modelo de formatação para o ChatGPT</summary><pre># Visão geral
+Texto com **negrito**, ==destaque== e __sublinhado__.
+
+## Regra principal
+- Primeiro ponto
+- Segundo ponto
+
+> ATENÇÃO: uma regra importante ou exceção.
+
+| Caso | Regra | Exemplo |
+| --- | --- | --- |
+| Prefixo | Explicação | Exemplo comentado |
+
+---
+## Resumo para revisão
+1. Primeiro passo
+2. Segundo passo</pre><p>Peça uma aula em Markdown nesse formato. HTML não é necessário.</p></details>
+<details class="format-help"><summary>Modelos opcionais e instruções para gerar quadros no ChatGPT</summary><div class="frame-tools" aria-label="Modelos de quadros"><button type="button" class="btn btn-soft" data-frame="resumo">Quadro de resumo</button><button type="button" class="btn btn-soft" data-frame="mapa">Mapa mental</button><button type="button" class="btn btn-soft" data-frame="tabela">Tabela comparativa</button><button type="button" class="btn btn-soft" data-frame="imagens">Imagens lado a lado</button><button type="button" class="btn btn-outline" id="copyLessonPrompt">Copiar instruções para o ChatGPT</button></div><p>Para gerar quadros com cores e colunas no padrão do site, copie as instruções acima para o ChatGPT. Depois basta copiar a resposta inteira e colar no conteúdo da aula. Os modelos também permitem acrescentar um quadro a uma aula existente.</p><p>Se a cópia trouxer somente texto, as cores e a disposição do quadro original não estarão disponíveis para conversão. Nesse caso, as instruções para o ChatGPT garantem o formato dos quadros.</p></details>
+<label for="importLessonText">Importar texto do ChatGPT (.md ou .txt)</label><input id="importLessonText" type="file" accept=".md,.txt,text/plain,text/markdown">
+<label for="content">Conteúdo da aula</label><textarea id="content" required rows="18" maxlength="150000" placeholder="Cole ou escreva aqui a aula esquematizada..."></textarea>
+<label for="imageUpload">Inserir imagem na posição do cursor</label><input id="imageUpload" type="file" accept="image/png,image/jpeg,image/webp"><p class="muted">PNG, JPG ou WebP. As imagens são otimizadas e salvas junto da aula. Limite total: 4 MB após otimização.</p>
+<div class="reader-actions"><button id="previewButton" type="button" class="btn btn-soft">Visualizar aula</button><label class="publish-option"><input id="published" type="checkbox"> Publicar para os alunos</label><button id="saveLesson" type="submit" class="btn btn-primary">Salvar aula</button><button id="deleteLesson" type="button" class="btn btn-outline hidden">Excluir aula</button></div>
+<p id="editorStatus" role="status"></p></form><h3>Prévia da aula — clique para editar</h3><p class="muted">Edite diretamente títulos, textos, legendas e células das tabelas abaixo. Use <strong>**texto**</strong> para negrito, ==texto== para destaque e __texto__ para sublinhado; a formatação aparece ao clicar fora do campo. Ao terminar, clique em <strong>Salvar aula</strong>.</p><article id="preview" class="lesson-paper"></article><button id="savePreview" type="button" class="btn btn-primary">Salvar aula</button></section>
+</main>
+<dialog id="contestDialog" class="modal"><div class="modal-title"><h2>Gerenciar concursos</h2><button id="closeContests" type="button" class="btn btn-soft">Fechar</button></div>
+<label for="contestSelect">Cadastrar ou editar</label><select id="contestSelect"><option value="">+ Novo concurso</option></select>
+<form id="contestForm"><label for="contestName">Nome do concurso</label><input id="contestName" required maxlength="180" placeholder="Ex.: PMPE">
+<label for="contestImage">Link da imagem no Imgur (opcional)</label><input id="contestImage" type="url" maxlength="600" placeholder="https://i.imgur.com/abc123.png"><p class="muted">Use o link direto da imagem. Somente o endereço é salvo; a imagem é carregada do Imgur.</p><button id="saveContest" class="btn btn-primary" type="submit">Salvar concurso</button><p id="contestStatus" role="status"></p></form></dialog>
+</body></html>

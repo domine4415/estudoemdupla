@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="theme-color" content="#0a1020" />
+<title>ESTUDO POLICIAL • Preparação para carreiras policiais</title>
+<link rel="stylesheet" href="/styles.css" />
+<script src="/room-voice.js" defer></script>
+<link rel="stylesheet" href="/room-chat.css"><script src="/room-chat.js" defer></script>
+<script src="/app.js" defer></script>
+<link rel="stylesheet" href="/navigation.css"><script src="/navigation.js" defer></script><script src="/presence.js" defer></script><link rel="stylesheet" href="/searchable-select.css"><script src="/searchable-select.js" defer></script><script src="/page-motion.js" defer></script></head>
+<body>
+<header class="topbar">
+  <div class="brand"><span class="brand-mark"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 4 6v6c0 5 8 9 8 9s8-4 8-9V6z"/><path d="m8.5 12 2.3 2.3 4.7-4.8"/></svg></span><span>ESTUDO<span class="brand-secondary"> POLICIAL</span></span></div>
+  <div id="accountBar" class="account-bar hidden"><a id="accountEmail" class="btn btn-small btn-soft" href="/comunidade#meu-perfil">Perfil</a><button id="logout" class="btn btn-small btn-soft">Sair da conta</button></div>
+  <a id="bankNavLink" href="/banco" class="btn btn-small btn-soft hidden" style="text-decoration:none;margin-left:auto;margin-right:14px">Banco de questões</a>
+  <a id="theoryNavLink" href="/teoria" class="btn btn-small btn-soft" style="text-decoration:none">Teoria</a>
+  <nav id="roomQuickNav" class="room-quick-nav hidden" aria-label="Atalhos da sala"><a href="/banco" title="Banco de questões"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v16H6.5A2.5 2.5 0 0 0 4 21z"/><path d="M4 5.5v13A2.5 2.5 0 0 1 6.5 16H20M8 7h8M8 11h6"/></svg></a><a href="/banco#estatisticas" title="Estatísticas"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M7 17v-5m5 5V7m5 10v-7"/></svg></a><a href="/" title="Salas ao vivo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3"/><path d="M3 19v-2a6 6 0 0 1 12 0v2H3zM17 5a3 3 0 0 1 0 6m1 3a5 5 0 0 1 3 5"/></svg></a></nav><div id="topRoom" class="top-room hidden"><span class="live-dot"></span> SALA <strong id="roomCode"></strong><button id="copyLink" class="btn btn-small btn-soft">Copiar link</button></div>
+</header>
+<main>
+  <div id="authLoading" class="auth-loading" role="status"><span></span>Preparando seu espaço de estudos...</div>
+  <section id="authGate" class="auth-layout hidden">
+    <div class="auth-intro">
+      <div class="hero-eyebrow">ESTUDO POLICIAL</div>
+      <h1>Sua missão.<br><span>A aprovação.</span></h1>
+      <p>Prepare-se para as carreiras policiais. Resolva questões, acompanhe seu desempenho e treine em salas de estudo ao vivo.</p>
+      <div class="auth-benefits"><span>✓ Questões organizadas</span><span>✓ Salas sincronizadas</span><span>✓ Evolução acompanhada</span></div>
+    </div>
+    <section class="panel auth-panel" aria-label="Acesso à conta">
+      <div class="auth-panel-header"><span class="auth-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 4 6v6c0 5 8 9 8 9s8-4 8-9V6z"/><path d="m8.5 12 2.3 2.3 4.7-4.8"/></svg></span><span>ÁREA DE ACESSO</span></div>
+      <h2 id="authHeading">Bem-vindo de volta!</h2>
+      <p id="authDescription">Entre com seu e-mail e sua senha para continuar.</p>
+      <div class="auth-switch" role="group" aria-label="Tipo de acesso"><button id="tabLogin" type="button" class="auth-tab active">Entrar</button><button id="tabRegister" type="button" class="auth-tab">Criar conta</button></div>
+      <form id="authForm">
+        <label for="authEmail">E-mail</label><input id="authEmail" name="email" type="email" autocomplete="email" placeholder="seuemail@exemplo.com" required />
+        <label for="authPassword">Senha</label><input id="authPassword" name="password" type="password" autocomplete="current-password" minlength="6" placeholder="Digite sua senha" required />
+        <button id="authSubmit" type="submit" class="btn btn-primary btn-full">Entrar na minha conta <span>→</span></button>
+      </form>
+      <div id="authMessage" class="auth-message hidden" role="status"></div>
+      <p class="auth-footnote">Cada participante cria sua conta. As salas abertas aparecem automaticamente após o login.</p>
+    </section>
+  </section>
+  <div id="landing" class="landing hidden">
+    <div class="hero-eyebrow">FOCO NAS CARREIRAS POLICIAIS</div>
+    <h1>Disciplina no estudo.<br /><span>Foco na missão.</span></h1>
+    <p class="hero-desc" id="landingDescription">Escolha uma sala de treinamento e resolva questões em tempo real.</p>
+    <p id="serverNotice" class="server-notice hidden" role="alert"></p>
+    <section class="home-actions" aria-label="Acessos principais">
+<a href="/comunidade" class="home-action"><span class="action-icon">♧</span><span class="action-copy"><strong>Comunidade e perfil</strong><small>Pessoas online, amigos, convites e troféus</small></span><span class="action-arrow">→</span></a>
+      <a href="/teoria" class="home-action"><span class="action-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h6a3 3 0 0 1 3 3v14a4 4 0 0 0-4-3H4z"/><path d="M13 7a3 3 0 0 1 3-3h5v14h-4a4 4 0 0 0-4 3M7 8h3M7 12h3M16 8h2M16 12h2"/></svg></span><span class="action-copy"><strong>Teoria</strong><small>Aulas esquematizadas por disciplina e tópico</small></span><span class="action-arrow">→</span></a>
+      <a href="/banco" class="home-action"><span class="action-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v16H6.5A2.5 2.5 0 0 0 4 21z"/><path d="M4 5.5v13A2.5 2.5 0 0 1 6.5 16H20M8 7h8M8 11h6"/></svg></span><span class="action-copy"><strong>Banco de questões</strong><small>Resolva questões no seu ritmo</small></span><span class="action-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M5 12h14m-6-6 6 6-6 6"/></svg></span></a>
+      <a href="/banco#estatisticas" class="home-action"><span class="action-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M7 17v-5m5 5V7m5 10v-7"/></svg></span><span class="action-copy"><strong>Estatísticas</strong><small>Acompanhe acertos e evolução</small></span><span class="action-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M5 12h14m-6-6 6 6-6 6"/></svg></span></a>
+      <a href="/?view=salas#salas-abertas" class="home-action"><span class="action-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3"/><path d="M3 19v-2a6 6 0 0 1 12 0v2H3zM17 5a3 3 0 0 1 0 6m1 3a5 5 0 0 1 3 5"/></svg></span><span class="action-copy"><strong>Salas ao vivo</strong><small>Estude com outros participantes</small></span><span class="action-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M5 12h14m-6-6 6 6-6 6"/></svg></span></a>
+      <button id="openCreatePanel" type="button" class="home-action hidden" aria-controls="createRoomPanel" aria-expanded="false"><span class="action-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="3" width="18" height="18" rx="4"/><path d="M12 7v10M7 12h10"/></svg></span><span class="action-copy"><strong>Criar sala</strong><small>Disponível para qualquer conta</small></span><span class="action-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M5 12h14m-6-6 6 6-6 6"/></svg></span></button>
+    </section>
+    <section id="createRoomPanel" class="home-create-panel hidden" aria-label="Criar sala">
+      <div class="create-title"><div><div class="eyebrow">CRIE SUA SALA</div><h2>Criar sala de estudos</h2></div><button id="closeCreatePanel" class="btn btn-soft btn-small" type="button">Fechar</button></div>
+      <div class="landing-panels"><section id="adminCreateCard" class="panel landing-card hidden">
+        <p>Escolha a capacidade e a privacidade. As questões serão carregadas do banco.</p>
+        <label for="roomName">Nome da sala</label><input id="roomName" placeholder="Ex.: Direito Penal • IGEDUC" maxlength="70" />
+        <label for="hostName">Seu nome no perfil</label><input id="hostName" readonly value="Nome do seu perfil" aria-describedby="profileNameHelp"><p id="profileNameHelp" class="hint">Para mudar seu nome, edite o <a href="/comunidade#meu-perfil">Perfil</a>.</p>
+        <label for="roomCapacity">Limite de pessoas (incluindo você)</label><input id="roomCapacity" type="number" min="2" max="20" value="2"><label for="roomAccess">Entrada</label><select id="roomAccess"><option value="open">Aberta para usuários com login</option><option value="password">Protegida por senha</option></select><label for="roomPassword">Senha da sala</label><input id="roomPassword" type="password" minlength="4" maxlength="100" disabled autocomplete="new-password"><p class="hint">Após 30 minutos sem atividade, a sala é encerrada automaticamente.</p><button id="createRoom" class="btn btn-primary btn-full">Criar sala <span>→</span></button>
+      </section></div>
+    </section>
+    <section id="joinRoomPanel" class="landing-panels"><section id="joinCard" class="panel landing-card hidden">
+        <label for="joinName">Seu nome no perfil</label><input id="joinName" readonly value="Nome do seu perfil">
+        <label for="joinCode">Código da sala</label><input id="joinCode" placeholder="Ex.: A7K3PL" maxlength="6" autocapitalize="characters" />
+        <label for="joinPassword">Senha da sala (se houver)</label><input id="joinPassword" type="password" maxlength="100" autocomplete="off"><button id="joinRoom" class="btn btn-outline btn-full">Entrar na sala</button>
+    </section></section>
+    <section id="salas-abertas" class="panel room-directory" aria-label="Salas abertas">
+      <div class="directory-heading"><div><div class="eyebrow">SALAS DE ESTUDO</div><h2>Salas abertas</h2><a href="/?action=criar" class="btn btn-primary btn-small">+ Criar sala</a><p>Escolha uma sala para entrar. Cada dono define a capacidade e pode proteger a entrada com senha.</p></div>
+        <button id="refreshRooms" class="btn btn-soft btn-small" type="button">Atualizar ↻</button></div>
+      <div id="roomsNotice" class="directory-notice" role="status">Procurando salas...</div>
+      <div id="roomsList" class="room-cards"></div>
+    </section>
+    <div class="resume-panel"><button id="resumeRoom" class="btn btn-soft hidden">Retomar minha sala anterior</button></div>
+  </div>
+
+  <div id="workspace" class="workspace hidden">
+    <aside class="sidebar panel" id="sidebar">
+      <div class="sidebar-head"><div class="eyebrow">SALA DE ESTUDOS</div><h2 id="roomTitle">Sua sessão</h2><div id="memberStatus" class="member-status">Aguardando participante...</div></div>
+      <div class="host-only" id="uploadArea">
+        <div id="dropZone" class="drop-zone hidden" tabindex="0"><span class="upload-icon">⇧</span><strong>Importar questões</strong><span>Arraste seu arquivo JSON ou clique aqui</span><small>Enunciados e alternativas serão organizados automaticamente</small><input id="jsonFile" type="file" accept=".json,application/json" aria-label="Selecionar arquivo JSON"></div>
+        <div class="room-bank-import">
+          <strong>Escolher questões do banco</strong>
+          <label for="bankRoomSubject">Disciplina</label><select id="bankRoomSubject" data-searchable="Digite o nome da disciplina"><option value="">Todas</option></select>
+          <label for="bankRoomTopic">Assunto</label><select id="bankRoomTopic" data-searchable="Digite o nome do assunto" disabled><option value="">Escolha uma disciplina primeiro</option></select>
+          <label for="bankRoomHistory">Histórico de resolução</label><select id="bankRoomHistory"><option value="all">Todas as questões</option><option value="owner">Não resolvidas pelo dono da sala</option><option value="room">Não resolvidas nesta sala</option><option value="participant">Não resolvidas por um participante</option></select>
+          <label for="bankRoomParticipant">Participante</label><select id="bankRoomParticipant" disabled><option value="">Escolha o filtro por participante</option></select>
+          <label for="bankRoomBoard">Banca</label><select id="bankRoomBoard" data-searchable="Digite o nome da banca"><option value="">Todas as bancas</option></select>
+          <label for="bankRoomYear">Ano</label><select id="bankRoomYear"><option value="">Todos os anos</option></select>
+          <label for="bankRoomType">Modo de questão</label><select id="bankRoomType"><option value="">Todos os modos</option><option value="true_false">Certo ou errado</option><option value="multiple_choice">Múltipla escolha (A, B, C, D, E)</option></select>
+          <label class="room-filter-check"><input id="bankRoomExcludeOutdated" type="checkbox"> Remover desatualizadas</label><label class="room-filter-check"><input id="bankRoomOnlyOriginal" type="checkbox"> Somente questões inéditas</label>
+          <label for="bankRoomLimit">Quantidade de questões</label><input type="number" id="bankRoomLimit" min="1" max="200" value="50">
+          <button id="importFromBank" class="btn btn-soft btn-full" type="button">Carregar do banco →</button>
+        </div>
+        <div id="importMessage" class="hint"></div>
+        <button id="exportJson" class="btn btn-soft btn-full hidden">Baixar JSON organizado</button>
+      </div>
+      <div class="sidebar-list-top"><div class="eyebrow">QUESTÕES <span id="questionTotal">0</span></div><div class="muted tiny">Clique para navegar</div></div>
+      <div id="questionList" class="question-list"><p class="empty-sidebar">Importe um JSON para começar.</p></div>
+      <div class="sidebar-footer"><button id="roomSettings" class="btn btn-soft btn-full host-only" type="button">Editar senha da sala</button><button id="closeRoom" class="btn btn-outline btn-full host-only">Encerrar sala</button><button id="exitRoom" class="btn btn-ghost">Voltar às salas</button></div>
+    </aside>
+
+    <section class="content">
+      <section class="panel room-voice" aria-label="Chamada de voz"><div><div class="eyebrow">ÁUDIO EM GRUPO</div><h2>Chamada de voz</h2></div><div class="voice-buttons"><button id="voiceJoin" class="btn btn-primary" type="button">Entrar na chamada</button><button id="voiceMute" class="btn btn-soft" type="button" disabled>Silenciar microfone</button><button id="voiceLeave" class="btn btn-outline" type="button" disabled>Sair da chamada</button><button id="voicePlay" class="btn btn-soft" type="button" hidden>Ouvir chamada</button></div><p id="voiceStatus" role="status">Áudio desligado. Entre na chamada para conversar.</p><audio id="voiceAudio" autoplay playsinline></audio></section>
+      <div class="session-head panel"><div><div class="eyebrow">TREINAMENTO AO VIVO</div><div class="session-subtitle" id="sessionSubtitle">Aguardando questões...</div></div><div class="session-score hidden"><div><strong id="scoreHost">0</strong><small id="scoreHostName">Você</small></div><span>×</span><div><strong id="scoreGuest">0</strong><small id="scoreGuestName">Amigo</small></div></div></div>
+
+      <section id="emptyState" class="panel empty-main"><div class="empty-symbol">◈</div><h2>Sua sala está pronta!</h2><p id="emptyDescription">Escolha as questões publicadas do banco para começar.</p></section>
+
+      <section id="questionArea" class="panel question-area hidden">
+        <div class="question-top"><div class="eyebrow" id="questionNumber">QUESTÃO 01</div><span id="questionType" class="pill">MÚLTIPLA ESCOLHA</span></div>
+        <div class="question-meta" id="questionMeta"></div>
+        <h2 class="question-heading">Leia e marque a alternativa</h2>
+        <div class="statement" id="questionStatement"></div>
+        <div id="answerOptions" class="answer-options"></div>
+        <div id="incompleteNotice" class="notice warning hidden">A extração não trouxe alternativas suficientes. O criador da sala pode editar esta questão antes de responder.</div>
+        <div id="feedback" class="feedback hidden"></div>
+        <div class="host-only host-tools">
+          <div class="tool-line hidden"><button id="editQuestion" class="btn btn-soft btn-small">Editar questão</button><a id="originalLink" href="#" target="_blank" rel="noopener noreferrer" class="source-link hidden">Abrir no TEC ↗</a></div>
+          <div class="answer-key hidden"><label for="keySelect">Gabarito (opcional)</label><select id="keySelect"><option value="">Não informado no JSON</option></select><small>O gabarito não é inventado: você pode informar depois de conferir.</small></div>
+          <div class="nav-buttons"><button id="prevQuestion" class="btn btn-soft">← Anterior</button><button id="revealAnswers" class="btn btn-outline">Revelar escolhas</button><button id="nextQuestion" class="btn btn-primary">Próxima →</button></div>
+        </div>
+      </section>
+    </section>
+    <aside class="stats panel"><div class="eyebrow">RESPOSTAS DA EQUIPE</div><h2>Ao vivo</h2>
+      <div id="roomParticipants"></div>
+    </aside>
+  </div>
+</main>
+<div id="toast" class="toast hidden" role="status"></div>
+<dialog id="editDialog" class="modal">
+  <form id="editForm"><div class="modal-title"><h2>Editar questão</h2><button type="button" id="closeDialog" class="btn btn-ghost">Fechar ✕</button></div>
+    <label for="editStatement">Enunciado</label><textarea id="editStatement" rows="8" required></textarea>
+    <label>Alternativas (uma por linha, formato A) texto)</label><textarea id="editAlternatives" rows="7" placeholder="A) Primeira alternativa&#10;B) Segunda alternativa"></textarea>
+    <div class="modal-actions"><button type="submit" class="btn btn-primary">Salvar correção</button></div>
+  </form>
+</dialog>
+<dialog id="roomSettingsDialog" class="modal"><div class="modal-title"><h2>Senha da sala</h2><button id="closeRoomSettings" class="btn btn-soft" type="button">Fechar</button></div><form id="roomSettingsForm"><label for="settingsAccess">Entrada na sala</label><select id="settingsAccess"><option value="open">Aberta (remover senha)</option><option value="password">Definir ou trocar senha</option></select><label for="settingsPassword">Nova senha</label><input id="settingsPassword" type="password" minlength="4" maxlength="100" autocomplete="new-password"><p>Quem já está na sala continua conectado. A alteração vale para as próximas entradas.</p><button id="saveRoomSettings" class="btn btn-primary" type="submit">Salvar alteração</button><p id="settingsStatus" role="status"></p></form></dialog>
+<aside id="roomChatDock" class="room-chat-dock" hidden aria-label="Chat da sala"><button id="roomChatBalloon" class="room-chat-balloon" hidden type="button" aria-label="Abrir a última mensagem"><strong id="roomChatBalloonName"></strong><span id="roomChatBalloonText"></span></button><section id="roomChatPanel" class="room-chat-panel" hidden><header class="room-chat-header"><strong>Chat da sala</strong><button id="roomChatClose" type="button" aria-label="Recolher chat">×</button></header><div id="roomChatMessages" class="room-chat-messages" role="log" aria-live="polite" aria-label="Mensagens da sala"></div><form id="roomChatForm" class="room-chat-form"><textarea id="roomChatInput" rows="1" maxlength="1000" required placeholder="Escreva uma mensagem..." aria-label="Mensagem"></textarea><button id="roomChatSend" class="btn btn-primary" type="submit">Enviar</button></form><p id="roomChatStatus" class="room-chat-status" role="status"></p></section><button id="roomChatToggle" class="room-chat-toggle" type="button" aria-controls="roomChatPanel" aria-expanded="false">Chat <span id="roomChatCount" class="room-chat-count" hidden>0</span></button></aside>
+</body>
+</html>

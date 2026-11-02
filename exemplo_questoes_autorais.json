@@ -1,0 +1,38 @@
+{
+  "questions": [
+    {
+      "id": "autoral-direito-001",
+      "type": "multiple_choice",
+      "subject": "Direito Penal",
+      "topic": "Crimes contra a vida",
+      "board": "Questão autoral",
+      "year": "2026",
+      "exam": "Treinamento próprio",
+      "statement": "Conforme o Código Penal brasileiro, qual conduta corresponde à descrição do homicídio simples?",
+      "alternatives": [
+        {"letter": "A", "text": "Matar alguém."},
+        {"letter": "B", "text": "Subtrair coisa alheia móvel."},
+        {"letter": "C", "text": "Ofender a integridade corporal de outrem."},
+        {"letter": "D", "text": "Constranger alguém mediante grave ameaça para obter vantagem econômica."}
+      ],
+      "correct": "A",
+      "commentary": "O art. 121 do Código Penal tipifica o homicídio simples com a conduta de matar alguém. A alternativa B corresponde, em essência, ao furto; a C, à lesão corporal; e a D se relaciona à extorsão. Este comentário é material didático original para testar o aplicativo."
+    },
+    {
+      "id": "autoral-portugues-001",
+      "type": "true_false",
+      "subject": "Português",
+      "topic": "Coesão textual",
+      "board": "Questão autoral",
+      "year": "2026",
+      "exam": "Treinamento próprio",
+      "statement": "Na frase 'Estudou com regularidade; portanto, estava preparado', o conectivo 'portanto' estabelece uma relação de conclusão.",
+      "alternatives": [
+        {"letter": "C", "text": "Certo"},
+        {"letter": "E", "text": "Errado"}
+      ],
+      "correct": "C",
+      "commentary": "A palavra 'portanto' é um conectivo conclusivo: apresenta um resultado ou conclusão inferida do que veio antes. Na frase, o preparo é apresentado como consequência do estudo regular."
+    }
+  ]
+}
