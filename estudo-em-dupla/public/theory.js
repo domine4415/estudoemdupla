@@ -75,22 +75,34 @@ function renderBlocks(target,lesson,depth=0){
 }
 function options(id,values,label){const select=$(id),old=select.value;select.replaceChildren(new Option(label,''));for(const value of [...new Set(values)].sort((a,b)=>a.localeCompare(b,'pt-BR')))select.add(new Option(value,value));if([...select.options].some(o=>o.value===old))select.value=old;}
 function topics(){options('topic',lessons.filter(l=>!$('subject').value||l.subject===$('subject').value).map(l=>l.topic),'Todos os tópicos');}
-let browse={subject:'',topic:'',subtopic:null};
+let contests=[];
+function lessonContestIds(lesson){return Array.isArray(lesson.contest_ids)?lesson.contest_ids:(lesson.contest_id?[lesson.contest_id]:[]);}
+let browse={contest:null,subject:'',topic:'',subtopic:null};
+function navigateContest(id){browse.contest=id;navigateTheory();}
 function navigateTheory(subject='',topic='',subtopic=null){
-  browse={subject,topic,subtopic};$('subject').value=subject;topics();$('topic').value=topic;$('search').value='';cards();
+  browse={contest:browse.contest,subject,topic,subtopic};$('subject').value=subject;topics();$('topic').value=topic;$('search').value='';cards();
 }
 function cards(){
   const search=$('search').value.trim().toLocaleLowerCase('pt-BR');
   const root=$('lessonCards');root.replaceChildren();const crumbs=$('theoryBreadcrumbs');crumbs.replaceChildren();
   function crumb(label,action){const button=el('button',label);button.type='button';button.className='btn btn-soft btn-small';button.onclick=action;crumbs.append(button);}
-  crumb('Todas as disciplinas',()=>navigateTheory());
+  crumb('Todos os concursos',()=>navigateContest(null));
+  if(browse.contest!==null)crumb(browse.contest==='geral'?'Conteúdo geral':contests.find(c=>c.id===browse.contest)?.name||'Concurso',()=>navigateTheory());
   if(browse.subject)crumb(browse.subject,()=>navigateTheory(browse.subject));
   if(browse.topic)crumb(browse.topic,()=>navigateTheory(browse.subject,browse.topic));
   if(browse.subtopic!==null)crumb(browse.subtopic,()=>navigateTheory(browse.subject,browse.topic,browse.subtopic));
-  let visible=lessons.filter(l=>(!browse.subject||l.subject===browse.subject)&&(!browse.topic||l.topic===browse.topic)&&(browse.subtopic===null||(l.subtopic||'')===browse.subtopic));
-  if(search)visible=visible.filter(l=>[l.title,l.subject,l.topic,l.subtopic].filter(Boolean).join(' ').toLocaleLowerCase('pt-BR').includes(search));
+  let visible=lessons.filter(l=>(browse.contest===null||(browse.contest==='geral'?!lessonContestIds(l).length:lessonContestIds(l).includes(browse.contest)))&&(!browse.subject||l.subject===browse.subject)&&(!browse.topic||l.topic===browse.topic)&&(browse.subtopic===null||(l.subtopic||'')===browse.subtopic));
+  if(search)visible=visible.filter(l=>[l.title,l.subject,l.topic,l.subtopic,contests.filter(c=>lessonContestIds(l).includes(c.id)).map(c=>c.name).join(' ')].filter(Boolean).join(' ').toLocaleLowerCase('pt-BR').includes(search));
   function group(label,rows,action,kind){const card=el('button');card.type='button';card.className='panel lesson-card theory-folder';const meta=el('div',kind);meta.className='eyebrow';card.append(meta,el('h2',label),el('span',rows.length+' aula'+(rows.length===1?'':'s')),el('span','Explorar →'));card.onclick=action;root.append(card);}
   const names=key=>[...new Set(visible.map(l=>l[key]).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'pt-BR'));
+  if(!search&&browse.contest===null){
+    for(const contest of contests){
+      group(contest.name,lessons.filter(l=>lessonContestIds(l).includes(contest.id)),()=>navigateContest(contest.id),'CONCURSO');
+      if(contest.image_url){const card=root.lastElementChild;const image=el('img');image.src=contest.image_url;image.alt=contest.name;image.loading='lazy';image.referrerPolicy='no-referrer';image.className='contest-cover';image.onerror=()=>{image.hidden=true;};card.prepend(image);}
+    }
+    const general=lessons.filter(l=>!lessonContestIds(l).length);if(general.length)group('Conteúdo geral',general,()=>navigateContest('geral'),'SEM CONCURSO');
+    $('catalogCount').textContent=root.children.length?'Escolha um concurso para ver as disciplinas.':admin?'Cadastre o primeiro concurso em Gerenciar concursos.':'Novos concursos aparecerão aqui em breve.';return;
+  }
   if(!search&&!browse.subject){for(const subject of names('subject'))group(subject,visible.filter(l=>l.subject===subject),()=>navigateTheory(subject),'DISCIPLINA');$('catalogCount').textContent='Escolha uma disciplina para começar.';return;}
   if(!search&&!browse.topic){for(const topic of names('topic'))group(topic,visible.filter(l=>l.topic===topic),()=>navigateTheory(browse.subject,topic),'TÓPICO');$('catalogCount').textContent='Escolha um tópico de '+browse.subject+'.';return;}
   if(!search&&browse.subtopic===null){for(const subtopic of names('subtopic'))group(subtopic,visible.filter(l=>l.subtopic===subtopic),()=>navigateTheory(browse.subject,browse.topic,subtopic),'SUBTÓPICO');visible=visible.filter(l=>!l.subtopic);}
@@ -98,7 +110,7 @@ function cards(){
   for(const lesson of visible){const card=el('button');card.type='button';card.className='panel lesson-card';const meta=el('div',[lesson.subject,lesson.topic,lesson.subtopic].filter(Boolean).join(' / '));meta.className='eyebrow';const foot=el('span',(lesson.published?'Aula publicada':'Rascunho • somente administrador')+' · '+new Date(lesson.updated_at).toLocaleDateString('pt-BR'));foot.className='muted';card.append(meta,el('h2',lesson.title),foot,el('span','Estudar aula →'));card.onclick=()=>openLesson(lesson.id);root.append(card);}
   if(!root.children.length)$('catalogCount').textContent='Nenhuma aula encontrada. '+(admin?'Cadastre uma aula para organizar esta seção.':'Novas aulas aparecerão quando forem publicadas.');
 }
-async function load(){lessons=(await api('theory')).items;options('subject',lessons.map(l=>l.subject),'Todas as disciplinas');topics();cards();for(const [id,key] of [['subjectOptions','subject'],['topicOptions','topic'],['subtopicOptions','subtopic']]){$(id).replaceChildren();for(const value of new Set(lessons.map(l=>l[key]).filter(Boolean))){const option=el('option');option.value=value;$(id).append(option);}}}
+async function load(){const [catalog,contestCatalog]=await Promise.all([api('theory'),api('theory/contests')]);lessons=catalog.items;contests=contestCatalog.items;fillContestOptions();options('subject',lessons.map(l=>l.subject),'Todas as disciplinas');topics();cards();for(const [id,key] of [['subjectOptions','subject'],['topicOptions','topic'],['subtopicOptions','subtopic']]){$(id).replaceChildren();for(const value of new Set(lessons.map(l=>l[key]).filter(Boolean))){const option=el('option');option.value=value;$(id).append(option);}}}
 function pane(id){for(const name of ['library','reader','editor'])$(name).classList.toggle('hidden',name!==id);}
 function tocSections(root){
   return [...root.querySelectorAll('[data-toc-section="true"]')].filter(node=>{
@@ -117,7 +129,7 @@ function buildLessonToc(){
   });
 }
 async function openLesson(id){const generation=++readGeneration;$('notice').textContent='Carregando aula...';try{const result=await api('theory/'+id);if(generation!==readGeneration)return;current=result.lesson;renderPaper($('lessonPaper'),current);buildLessonToc();window.lessonHighlighter?.open(current.id);$('editLesson').classList.toggle('hidden',!admin);pane('reader');$('notice').textContent='';history.replaceState(null,'','#aula='+id);window.scrollTo({top:0,behavior:'smooth'});}catch(e){if(generation===readGeneration)$('notice').textContent=e.message;}}
-function formLesson(){return {id:editingId,title:$('title').value,subject:$('editSubject').value,topic:$('editTopic').value,subtopic:$('editSubtopic').value,content:$('content').value,images,published:$('published').checked};}
+function formLesson(){return {id:editingId,contestIds:[...$('editContest').querySelectorAll('input:checked')].map(input=>input.value),title:$('title').value,subject:$('editSubject').value,topic:$('editTopic').value,subtopic:$('editSubtopic').value,content:$('content').value,images,published:$('published').checked};}
 function preview(){renderPaper($('preview'),formLesson());enablePreviewEditing();}
 function syncPreview(event){
   clearTimeout(previewTimer);
@@ -152,7 +164,7 @@ function enablePreviewEditing(){
     node.addEventListener('drop',event=>event.preventDefault());
   }
 }
-function edit(lesson){editingId=lesson?.id||null;images={...(lesson?.images||{})};for(const [id,key] of [['title','title'],['editSubject','subject'],['editTopic','topic'],['editSubtopic','subtopic'],['content','content']])$(id).value=lesson?.[key]||'';$('published').checked=lesson?.published||false;$('imageUpload').value='';$('deleteLesson').classList.toggle('hidden',!editingId);$('editorStatus').textContent='';dirty=false;pane('editor');preview();}
+function edit(lesson){const chosen=lesson?lessonContestIds(lesson):(browse.contest&&browse.contest!=='geral'?[browse.contest]:[]);for(const input of $('editContest').querySelectorAll('input'))input.checked=chosen.includes(input.value);editingId=lesson?.id||null;images={...(lesson?.images||{})};for(const [id,key] of [['title','title'],['editSubject','subject'],['editTopic','topic'],['editSubtopic','subtopic'],['content','content']])$(id).value=lesson?.[key]||'';$('published').checked=lesson?.published||false;$('imageUpload').value='';$('deleteLesson').classList.toggle('hidden',!editingId);$('editorStatus').textContent='';dirty=false;pane('editor');preview();}
 async function imageFile(file){
   if(!file)return;if(!['image/png','image/jpeg','image/webp'].includes(file.type))throw Error('Selecione uma imagem PNG, JPG ou WebP.');if(file.size>12*1024*1024)throw Error('Escolha uma imagem de até 12 MB.');
   const bitmap=await createImageBitmap(file);try{const scale=Math.min(1,1600/Math.max(bitmap.width,bitmap.height));const canvas=document.createElement('canvas');canvas.width=Math.max(1,Math.round(bitmap.width*scale));canvas.height=Math.max(1,Math.round(bitmap.height*scale));canvas.getContext('2d').drawImage(bitmap,0,0,canvas.width,canvas.height);const src=canvas.toDataURL('image/webp',.85);const content=$('content');const used=Object.entries(images).filter(([key])=>content.value.includes(']('+key+')'));if(used.reduce((n,[,v])=>n+v.length,src.length)>4*1024*1024)throw Error('Limite de imagens atingido (4 MB). Divida o conteúdo em mais aulas.');images=Object.fromEntries(used);const key='imagem-'+crypto.randomUUID();images[key]=src;const alt=file.name.replace(/\.[^.]+$/,'').replace(/[\[\]\r\n]/g,'');content.setRangeText('\n\n!['+alt+']('+key+')\n\n',content.selectionStart,content.selectionEnd,'end');dirty=true;preview();content.focus();}finally{bitmap.close();}
@@ -245,7 +257,17 @@ $('importLessonText').onchange=async()=>{const input=$('importLessonText');try{c
 $('copyLessonPrompt').onclick=async()=>{const text='Crie uma aula esquematizada para concursos policiais sobre [ASSUNTO], na disciplina [DISCIPLINA]. Entregue apenas Markdown, sem HTML e sem envolver a aula inteira em cercas de código. Numere as seções e subtópicos sempre terminando a numeração com ponto: 1. Introdução, 2. Regras gerais, 2.1. Conceito. Escreva cada título em sua própria linha. Não é necessário usar #. O site gera o sumário automaticamente por essa numeração. Não escreva um sumário separado. Use essa numeração somente para títulos que devem entrar no sumário; exemplos e fórmulas devem usar texto comum, negrito ou listas com hífen. Para quadros visuais, use exatamente os delimitadores abaixo, cada um em sua própria linha. Cada bloco aberto deve terminar com ::: em uma linha separada. Os blocos coloridos podem ficar dentro de um quadro ou mapa. No mapa, o primeiro bloco azul é a ideia central e ocupa a largura toda; os demais ficam lado a lado. Não crie novas variações dos delimitadores.\n\n'+frameTemplates.resumo+'\n\n'+frameTemplates.mapa+'\n\nInclua regras, exemplos, exceções e pegadinhas explicadas. Use os quadros apenas onde ajudarem o estudo. Imagens serão inseridas depois por upload; não invente links ou códigos de imagens.';try{await navigator.clipboard.writeText(text);$('editorStatus').textContent='Instruções copiadas. Cole no ChatGPT e substitua [ASSUNTO] e [DISCIPLINA].';}catch{$('editorStatus').textContent='Não foi possível copiar automaticamente. O formato dos quadros está nos modelos e na ajuda abaixo.';}};
 $('lessonForm').oninput=()=>{dirty=true;clearTimeout(previewTimer);previewTimer=setTimeout(preview,350);};
 $('subject').onchange=()=>navigateTheory($('subject').value);$('topic').onchange=()=>navigateTheory($('subject').value,$('topic').value);$('search').oninput=cards;$('lessonFilters').onsubmit=e=>e.preventDefault();
-$('clearFilters').onclick=()=>navigateTheory();
+$('clearFilters').onclick=()=>navigateContest(null);
+function fillContestOptions(){
+  const root=$('editContest'),chosen=[...root.querySelectorAll('input:checked')].map(input=>input.value);root.replaceChildren();
+  for(const contest of contests){const label=el('label'),input=el('input');label.className='contest-choice';input.type='checkbox';input.value=contest.id;input.checked=chosen.includes(contest.id);label.append(input,el('span',contest.name));root.append(label);}
+  if(!contests.length)root.append(el('p','Cadastre os concursos em Gerenciar concursos.'));
+  const select=$('contestSelect'),old=select.value;select.replaceChildren(new Option('+ Novo concurso',''));for(const contest of contests)select.add(new Option(contest.name,contest.id));if(contests.some(c=>c.id===old))select.value=old;
+}
+$('manageContests').onclick=()=>{$('contestStatus').textContent='';$('contestSelect').value='';$('contestForm').reset();$('contestDialog').showModal();};
+$('closeContests').onclick=()=>$('contestDialog').close();
+$('contestSelect').onchange=()=>{const contest=contests.find(c=>c.id===$('contestSelect').value);$('contestName').value=contest?.name||'';$('contestImage').value=contest?.image_url||'';$('contestStatus').textContent='';};
+$('contestForm').onsubmit=async event=>{event.preventDefault();const button=$('saveContest');if(button.disabled)return;button.disabled=true;try{const result=await api('theory/contests/save','POST',{id:$('contestSelect').value||null,name:$('contestName').value,imageUrl:$('contestImage').value});await load();$('contestSelect').value=result.id;$('contestStatus').textContent='Concurso salvo no banco e disponível no catálogo.';}catch(error){$('contestStatus').textContent=error.message;}finally{button.disabled=false;}};
 $('newLesson').onclick=()=>{if(dirty&&!confirm('Descartar as alterações não salvas?'))return;edit(null);};
 $('editLesson').onclick=()=>edit(current);$('previewButton').onclick=preview;
 $('imageUpload').onchange=async()=>{const input=$('imageUpload');$('saveLesson').disabled=true;try{await imageFile(input.files[0]);$('editorStatus').textContent='Imagem inserida. Você pode editar a legenda no conteúdo.';}catch(e){$('editorStatus').textContent=e.message;}finally{input.value='';$('saveLesson').disabled=false;}};
@@ -256,4 +278,4 @@ $('savePreview').onclick=()=>{if(!$('saveLesson').disabled)$('lessonForm').reque
 $('lessonForm').onsubmit=async e=>{e.preventDefault();const button=$('saveLesson');if(button.disabled)return;button.disabled=true;$('editorStatus').textContent='Salvando...';try{const result=await api('theory/save','POST',formLesson());dirty=false;editingId=result.id;await load();await openLesson(result.id);}catch(error){$('editorStatus').textContent=error.message;}finally{button.disabled=false;}};
 $('deleteLesson').onclick=async()=>{if(!editingId||!confirm('Excluir esta aula permanentemente?'))return;const button=$('deleteLesson');button.disabled=true;try{await api('theory/delete','POST',{id:editingId});dirty=false;current=null;editingId=null;history.replaceState(null,'',location.pathname);await load();pane('library');}catch(e){$('editorStatus').textContent=e.message;}finally{button.disabled=false;}};
 window.addEventListener('beforeunload',event=>{if(dirty){event.preventDefault();event.returnValue='';}});
-(async()=>{try{const session=await api('auth/me');if(!session.authenticated){$('notice').textContent='Entre na sua conta para estudar as aulas.';$('loginLink').classList.remove('hidden');return;}admin=!!session.isAdmin;window.lessonHighlighter?.setUser(session.user?.id);await load();$('newLesson').classList.toggle('hidden',!admin);pane('library');const match=location.hash.match(/^#aula=([0-9a-f-]+)$/i);if(match)await openLesson(match[1]);}catch(e){$('notice').textContent=e.message;}})();
+(async()=>{try{const session=await api('auth/me');if(!session.authenticated){$('notice').textContent='Entre na sua conta para estudar as aulas.';$('loginLink').classList.remove('hidden');return;}admin=!!session.isAdmin;window.lessonHighlighter?.setUser(session.user?.id);await load();$('newLesson').classList.toggle('hidden',!admin);$('manageContests').classList.toggle('hidden',!admin);pane('library');const match=location.hash.match(/^#aula=([0-9a-f-]+)$/i);if(match)await openLesson(match[1]);}catch(e){$('notice').textContent=e.message;}})();

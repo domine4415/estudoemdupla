@@ -50,3 +50,7 @@
 .toc-link:hover,.toc-link:focus-visible{background:#253c40;color:#c5f7d0;outline:1px solid #6a9c7a}.toc-link.toc-subsection{padding-left:28px;color:#adc2d6}
 .lesson-paper .lesson-anchor{scroll-margin-top:28px}.lesson-paper .lesson-anchor:focus{outline:2px solid #77ab86;outline-offset:6px}
 @media print{.lesson-toc{display:none!important}.lesson-paper .lesson-anchor:focus{outline:none}}
+
+.lesson-card .contest-cover{display:block;width:100%;height:180px;object-fit:contain;background:#0c1625;border-radius:8px;margin-bottom:8px}.contest-cover[hidden]{display:none!important}#contestDialog label{display:block;margin:18px 0 8px;font-size:13px}#contestDialog .muted{font-size:12px;line-height:1.6}
+
+.contest-choices{border:1px solid #34465d;border-radius:9px;padding:14px;margin:18px 0}.contest-choices legend{font-size:13px;color:#bdcce0}.theory-editor .contest-choice{display:flex;gap:10px;align-items:center;margin:10px 0}.contest-choice input{width:18px;height:18px;flex:0 0 18px;accent-color:#a2efb5}#editContest{max-height:240px;overflow-y:auto}

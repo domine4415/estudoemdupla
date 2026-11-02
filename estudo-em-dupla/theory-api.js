@@ -9,6 +9,27 @@ module.exports=function({databaseRequest,parseJson,send,err,isAdmin,storageEnabl
       try{return await databaseRequest('policial_lessons?'+params,options);}
       catch(e){throw Object.assign(new Error('Não foi possível acessar as aulas. Confira a conexão e se TEORIA_SQL.sql foi executado no Supabase.'),{status:503});}
     }
+    if(op==='contests'&&req.method==='GET'){
+      const items=[];
+      for(let offset=0;;offset+=1000){const rows=await (await databaseRequest('policial_contests?'+new URLSearchParams({select:'id,name,image_url',order:'name,id',limit:'1000',offset:String(offset)}))).json();items.push(...rows);if(rows.length<1000)break;}
+      return send(res,200,{items});
+    }
+    if(op==='contests/save'&&req.method==='POST'){
+      if(!admin)return err(res,403,'Somente o administrador pode gerenciar concursos.');
+      const body=await parseJson(req),name=text(body.name,180);let imageUrl=text(body.imageUrl,600);
+      if(!name||(body.id&&!UUID.test(body.id)))return err(res,400,'Informe o nome do concurso.');
+      if(imageUrl){
+        try{const image=new URL(imageUrl);
+          if(image.protocol!=='https:'||image.username||image.password||!['imgur.com','i.imgur.com'].includes(image.hostname))throw Error();
+          if(image.hostname==='imgur.com'&&/^\/[a-z0-9]+$/i.test(image.pathname))imageUrl='https://i.imgur.com'+image.pathname+'.jpg';
+          else if(image.hostname==='i.imgur.com'&&/^\/[a-z0-9]+\.(png|jpe?g|webp|gif)$/i.test(image.pathname))imageUrl=image.origin+image.pathname;
+          else throw Error();
+        }catch{return err(res,400,'Use o link de uma imagem do Imgur, por exemplo https://i.imgur.com/abc123.png (não um álbum).');}
+      }
+      const params=new URLSearchParams({select:'id'});if(body.id)params.set('id','eq.'+body.id);
+      const rows=await (await databaseRequest('policial_contests?'+params,{method:body.id?'PATCH':'POST',headers:{Prefer:'return=representation'},body:JSON.stringify({name,image_url:imageUrl,updated_at:new Date().toISOString()})})).json();
+      return rows.length?send(res,200,{id:rows[0].id}):err(res,404,'Concurso não encontrado.');
+    }
     if(op.startsWith('highlights/')&&(req.method==='GET'||req.method==='POST')){
       const lessonId=op.slice('highlights/'.length);
       if(!UUID.test(lessonId))return err(res,400,'Aula inválida.');
@@ -34,7 +55,7 @@ module.exports=function({databaseRequest,parseJson,send,err,isAdmin,storageEnabl
       }catch(e){throw Object.assign(new Error('Não foi possível acessar seus grifos. Confira a conexão e execute TEORIA_SQL.sql atualizado no Supabase.'),{status:503});}
     }
     if(req.method==='GET'&&!op){
-      const params=new URLSearchParams({select:'id,title,subject,topic,subtopic,published,updated_at',order:'subject,topic,title,id',limit:'1000'});
+      const params=new URLSearchParams({select:'id,title,subject,topic,subtopic,contest_id,contest_ids,published,updated_at',order:'subject,topic,title,id',limit:'1000'});
       if(!admin)params.set('published','eq.true');
       const items=[];
       for(let offset=0;;offset+=1000){params.set('offset',String(offset));const rows=await (await query(params)).json();items.push(...rows);if(rows.length<1000)break;}
@@ -61,7 +82,11 @@ module.exports=function({databaseRequest,parseJson,send,err,isAdmin,storageEnabl
         size+=value.length;images[key]=value;
       }
       if(size>4*1024*1024)return err(res,413,'As imagens desta aula excedem 4 MB. Divida o conteúdo em mais aulas.');
-      const row={title,subject,topic,subtopic:text(body.subtopic,180),content,images,published:body.published===true,updated_at:new Date().toISOString()};
+      const provided=body.contestIds??(body.contestId?[body.contestId]:[]);
+      if(!Array.isArray(provided)||provided.length>100||provided.some(id=>typeof id!=='string'||!UUID.test(id)))return err(res,400,'Selecione concursos válidos (até 100 por aula).');
+      const contestIds=[...new Set(provided)];
+      if(contestIds.length){const rows=await (await databaseRequest('policial_contests?'+new URLSearchParams({select:'id',id:'in.('+contestIds.join(',')+')'}))).json();if(rows.length!==contestIds.length)return err(res,400,'Um dos concursos selecionados não existe mais. Atualize a página.');}
+      const row={title,subject,topic,subtopic:text(body.subtopic,180),contest_id:contestIds[0]||null,contest_ids:contestIds,content,images,published:body.published===true,updated_at:new Date().toISOString()};
       const params=new URLSearchParams({select:'id'});if(body.id)params.set('id','eq.'+body.id);
       const rows=await (await query(params,{method:body.id?'PATCH':'POST',headers:{Prefer:'return=representation'},body:JSON.stringify(row)})).json();
       if(!rows.length)return err(res,404,'Aula não encontrada.');

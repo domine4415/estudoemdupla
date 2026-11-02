@@ -99,3 +99,13 @@ Execute novamente `TEORIA_SQL.sql` atualizado para criar `policial_lesson_highli
 ### Organização da Central de Teoria
 
 A entrada mostra disciplinas; cada disciplina abre seus tópicos. Dentro de um tópico aparecem os subtópicos e as aulas cadastradas sem subtópico. O campo Subtópico é opcional no editor. Exemplo: Língua Portuguesa → Sintaxe → Sujeito → Tipos de sujeito. As aulas existentes ficam diretamente nos tópicos até serem reclassificadas. Execute novamente TEORIA_SQL.sql para adicionar a coluna subtopic e publique theory-api.js e os arquivos atualizados da pasta public.
+
+
+### Concursos na teoria
+
+Execute TEORIA_SQL.sql atualizado para criar policial_contests e adicionar contest_id às aulas. Publique theory-api.js e public/theory.html, public/theory.js e public/theory.css atualizados. O administrador cadastra e edita concursos no botão Gerenciar concursos, com nome e imagem por link direto HTTPS do Imgur (por exemplo https://i.imgur.com/abc123.png). Links de álbuns não são aceitos. A imagem permanece no Imgur; apenas a URL é armazenada no Supabase. Na edição da aula, escolha o concurso. Aulas anteriores ficam em Conteúdo geral até serem classificadas. A navegação passa a Concurso → Disciplina → Tópico → Subtópico opcional → Aula. Somente aulas publicadas são listadas para os alunos; concursos cadastrados podem aparecer mesmo quando ainda não possuem aulas publicadas.
+
+
+### Compartilhar aulas entre concursos
+
+Execute TEORIA_SQL.sql atualizado e publique theory-api.js e os arquivos theory.html, theory.js e theory.css de public. No editor, marque todos os concursos em Concursos desta aula. A aula permanece com um único registro; aparece nas disciplinas e tópicos de cada concurso marcado, e qualquer edição atualiza o mesmo conteúdo em todos eles. Os vínculos antigos são preservados pela migração. Sem concursos marcados, fica em Conteúdo geral. Os grifos continuam associados à mesma aula e à conta do usuário.

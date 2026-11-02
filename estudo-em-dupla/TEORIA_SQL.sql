@@ -30,3 +30,21 @@ grant select,insert,update,delete on public.policial_lesson_highlights to servic
 
 -- Hierarquia opcional das aulas, preservando os registros existentes.
 alter table public.policial_lessons add column if not exists subtopic text not null default '';
+
+create table if not exists public.policial_contests (
+ id uuid primary key default gen_random_uuid(),
+ name text not null,
+ image_url text not null default '',
+ updated_at timestamptz not null default now()
+);
+alter table public.policial_contests enable row level security;
+revoke all on public.policial_contests from anon,authenticated;
+grant select,insert,update,delete on public.policial_contests to service_role;
+alter table public.policial_lessons add column if not exists contest_id uuid references public.policial_contests(id) on delete set null;
+create index if not exists policial_lessons_contest on public.policial_lessons(contest_id);
+
+-- Uma única aula pode ser compartilhada entre vários concursos.
+alter table public.policial_lessons add column if not exists contest_ids uuid[] not null default '{}';
+update public.policial_lessons set contest_ids=array[contest_id]
+where contest_id is not null and cardinality(contest_ids)=0;
+create index if not exists policial_lessons_contest_ids on public.policial_lessons using gin(contest_ids);
