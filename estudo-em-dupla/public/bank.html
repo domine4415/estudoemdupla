@@ -4,8 +4,8 @@
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#090e19">
 <title>Banco de Questões • ESTUDO POLICIAL</title>
-<link rel="stylesheet" href="/styles.css"><link rel="stylesheet" href="/bank.css">
-<script src="/bank.js" defer></script>
+<link rel="stylesheet" href="/styles.css"><link rel="stylesheet" href="/bank.css?v=20261102-multi">
+<script src="/bank.js?v=20261102-comentario" defer></script>
 <script src="/math-support.js" defer></script>
 <link rel="stylesheet" href="/navigation.css"><script src="/navigation.js" defer></script><script src="/presence.js" defer></script><link rel="stylesheet" href="/searchable-select.css"><script src="/searchable-select.js" defer></script><script src="/page-motion.js" defer></script><link rel="stylesheet" href="/date-picker.css"><script src="/date-picker.js" defer></script></head>
 <body>
@@ -38,10 +38,10 @@
       <details id="bankFilters" class="panel bank-filter">
         <summary class="bank-filter-heading"><span><span class="eyebrow">PERSONALIZAR ESTUDO</span><strong>Filtros de questões</strong></span><span class="filter-open-label">Mostrar filtros</span><span class="filter-close-label">Recolher filtros</span></summary><div class="bank-filter-body"><div class="bank-filter-grid">
         <div class="bank-filter-field"><label for="filterSearch">Buscar no enunciado</label><input id="filterSearch" placeholder="Ex.: abuso de autoridade" maxlength="70"></div>
-        <div class="bank-filter-field"><label for="filterSubject">Disciplina</label><select id="filterSubject" data-searchable="Digite o nome da disciplina"><option value="">Todas as disciplinas</option></select></div>
-        <div class="bank-filter-field"><label for="filterTopic">Tópico / Assunto</label><select id="filterTopic" data-searchable="Digite o nome do assunto" disabled><option value="">Todos os tópicos</option></select></div>
-        <div class="bank-filter-field"><label for="filterBoard">Banca</label><select id="filterBoard"><option value="">Todas as bancas</option></select></div>
-        <div class="bank-filter-field"><label for="filterYear">Ano</label><select id="filterYear"><option value="">Todos os anos</option></select></div>
+        <div class="bank-filter-field"><label for="filterSubject">Disciplina</label><select id="filterSubject" multiple data-bank-multi="Disciplinas"><option value="">Todas as disciplinas</option></select></div>
+        <div class="bank-filter-field"><label for="filterTopic">Tópico / Assunto</label><select id="filterTopic" multiple data-bank-multi="Assuntos" disabled><option value="">Todos os tópicos</option></select></div>
+        <div class="bank-filter-field"><label for="filterBoard">Banca</label><select id="filterBoard" multiple data-bank-multi="Bancas"><option value="">Todas as bancas</option></select></div>
+        <div class="bank-filter-field"><label for="filterYear">Ano</label><select id="filterYear" multiple data-bank-multi="Anos"><option value="">Todos os anos</option></select></div>
         <div class="bank-filter-field"><label for="filterStatus">Situação</label><select id="filterStatus"><option value="">Todas as questões</option><option value="unanswered">Não resolvidas</option><option value="answered">Já resolvidas</option></select></div>
         <div class="bank-filter-field"><label for="filterType">Tipo de questão</label><select id="filterType"><option value="">Todos os tipos</option><option value="true_false">Certo ou errado</option><option value="multiple_choice">Múltipla escolha</option></select></div>
 </div><div class="bank-filter-options">

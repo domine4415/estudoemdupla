@@ -90,10 +90,16 @@ module.exports=function createBankApi({databaseRequest,parseJson,send,err,isAdmi
       const page=Math.min(1000,Math.max(1,Number.parseInt(url.searchParams.get('page')||'1',10)||1));
       const p=new URLSearchParams({select:'id,subject,topic,board,exam_year,statement,has_key,has_commentary,data',published:'eq.true',order:'created_at.desc',limit:String(MAX_PAGE+1),offset:String((page-1)*MAX_PAGE)});
       for(const [field,column,max] of [['subject','subject',180],['topic','topic',180],['board','board',120],['year','exam_year',4]]){
-        const value=trimmed(url.searchParams.get(field),max);
-        if(value)p.set(column,field==='topic'?topicFilter(value):'eq.'+value);
+        const values=[...new Set(url.searchParams.getAll(field).map(v=>trimmed(v,max)).filter(Boolean))];
+        if(values.length>100)return err(res,400,'Selecione até 100 opções por filtro.');
+        if(field==='year'&&values.some(v=>!/^\d{4}$/.test(v)))return err(res,400,'Ano inválido.');
+        if(values.length===1)p.set(column,field==='topic'?topicFilter(values[0]):'eq.'+values[0]);
+        else if(values.length>1){
+          if(field==='topic')p.set('or','('+values.map(v=>{const filter=topicFilter(v),dot=filter.indexOf('.');return 'topic.'+filter.slice(0,dot)+'.'+JSON.stringify(filter.slice(dot+1));}).join(',')+')');
+          else p.set(column,'in.('+values.map(v=>JSON.stringify(v)).join(',')+')');
+        }
       }
-      if(url.searchParams.get('excludeOutdated')==='true')p.set('or','(data->>isOutdated.is.null,data->>isOutdated.eq.false)');
+      if(url.searchParams.get('excludeOutdated')==='true')p.set('and','(or(data->>isOutdated.is.null,data->>isOutdated.eq.false))');
       if(url.searchParams.get('onlyOriginal')==='true')p.set('data->>isOriginal','eq.true');
       const search=trimmed(url.searchParams.get('search'),70);
       if(search){ // Usar filtro da coluna simples, sem expor o JSON de respostas.
@@ -123,7 +129,7 @@ module.exports=function createBankApi({databaseRequest,parseJson,send,err,isAdmi
     if(op==='question'&&parts.length===2&&req.method==='GET'){
       const row=await questionById(parts[1]);
       if(!row)return err(res,404,'Questão não encontrada.');
-      const attempt=await latestAttempt(user.id,row.id);
+      const attempt=url.searchParams.get('fresh')==='true'?null:await latestAttempt(user.id,row.id);
       return send(res,200,{question:publicQuestion(row,attempt)});
     }
     if(op==='answer'&&req.method==='POST'){

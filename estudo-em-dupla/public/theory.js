@@ -289,15 +289,24 @@ function drawSelectedLessonQuestions(){
   const root=$('lessonSelectedQuestions');root.replaceChildren();
   for(const [id,label] of selectedLessonQuestions){const row=el('div');row.className='lesson-question-pick';const remove=el('button','Remover');remove.type='button';remove.className='btn btn-outline';remove.onclick=()=>{selectedLessonQuestions.delete(id);dirty=true;drawSelectedLessonQuestions();};row.append(el('span',label),remove);root.append(row);}
 }
-function lessonBankTopics(){const subject=$('lessonBankSubject').value;const select=$('lessonBankTopic');select.replaceChildren();select.disabled=!subject;const first=el('option',subject?'Todos os assuntos':'Escolha a disciplina primeiro');first.value='';select.append(first);for(const value of [...new Set((lessonBankFacets?.pairs||[]).filter(p=>p.subject===subject).map(p=>p.topic))]){const option=el('option',value);option.value=value;select.append(option);}}
+function lessonMultiOptions(id,values,emptyLabel='Todos (nenhuma seleção)'){
+ const root=$(id);root.replaceChildren(el('small',emptyLabel));
+ for(const value of [...new Set(values)]){const label=el('label'),input=el('input');input.type='checkbox';input.value=String(value);label.append(input,document.createTextNode(String(value)));root.append(label);}
+}
+function lessonBankTopics(){const subject=$('lessonBankSubject').value;lessonMultiOptions('lessonBankTopic',subject?(lessonBankFacets?.pairs||[]).filter(p=>p.subject===subject).map(p=>p.topic):[],subject?'Todos os assuntos (nenhuma seleção)':'Escolha a disciplina primeiro');}
+function lessonQuestionFilters(){
+ const filters=new URLSearchParams({subject:$('lessonBankSubject').value,search:$('lessonBankSearch').value});
+ for(const [id,key] of [['lessonBankTopic','topic'],['lessonBankBoard','board'],['lessonBankYear','year']])for(const input of $(id).querySelectorAll('input:checked'))filters.append(key,input.value);
+ return filters;
+}
 async function prepareLessonQuestions(lesson){
   selectedLessonQuestions=new Map((lesson?.question_ids||[]).map((id,i)=>[id,'Questão vinculada '+(i+1)+' · '+id]));drawSelectedLessonQuestions();
   $('lessonBankResults').replaceChildren();$('lessonBankStatus').textContent='';lessonBankPage=1;++lessonBankRequest;
-  try{if(!lessonBankFacets)lessonBankFacets=await api('bank/facets');const select=$('lessonBankSubject');select.replaceChildren();const first=el('option','Todas as disciplinas');first.value='';select.append(first);for(const value of lessonBankFacets.subjects||[]){const option=el('option',value);option.value=value;select.append(option);}select.value=lesson?.subject||'';lessonBankTopics();}catch(e){$('lessonBankStatus').textContent=e.message;}
+  try{if(!lessonBankFacets)lessonBankFacets=await api('bank/facets');const select=$('lessonBankSubject');select.replaceChildren();const first=el('option','Todas as disciplinas');first.value='';select.append(first);for(const value of lessonBankFacets.subjects||[]){const option=el('option',value);option.value=value;select.append(option);}select.value=lesson?.subject||'';lessonMultiOptions('lessonBankBoard',lessonBankFacets.boards||[]);lessonMultiOptions('lessonBankYear',(lessonBankFacets.years||[]).map(String));lessonBankTopics();}catch(e){$('lessonBankStatus').textContent=e.message;}
 }
 async function findLessonBankQuestions(page=1){
  const generation=++lessonBankRequest;lessonBankPage=page;$('lessonBankStatus').textContent='Buscando questões...';
- try{const query=new URLSearchParams({page:String(page),subject:$('lessonBankSubject').value,topic:$('lessonBankTopic').value,search:$('lessonBankSearch').value});const data=await api('bank/questions?'+query);if(generation!==lessonBankRequest)return;
+ try{const query=lessonQuestionFilters();query.set('page',String(page));const data=await api('bank/questions?'+query);if(generation!==lessonBankRequest)return;
  const root=$('lessonBankResults');root.replaceChildren();for(const q of data.items){const row=el('div');row.className='lesson-question-pick';const button=el('button',selectedLessonQuestions.has(q.id)?'Selecionada':'Adicionar');button.type='button';button.className='btn btn-soft';button.disabled=selectedLessonQuestions.has(q.id);button.onclick=()=>{if(selectedLessonQuestions.size>=200){$('lessonBankStatus').textContent='Limite de 200 questões por aula.';return;}selectedLessonQuestions.set(q.id,[q.subject,q.topic,q.statement||q.preview].filter(Boolean).join(' · '));button.disabled=true;button.textContent='Selecionada';dirty=true;drawSelectedLessonQuestions();};const text=el('div');text.append(el('strong',[q.subject,q.topic].filter(Boolean).join(' / ')),el('p',q.statement||q.preview));row.append(text,button);root.append(row);}
  $('lessonBankPrevious').disabled=page===1;$('lessonBankNext').disabled=!data.hasMore;$('lessonBankStatus').textContent=data.items.length?'Página '+page:'Nenhuma questão encontrada.';
  }catch(e){if(generation===lessonBankRequest)$('lessonBankStatus').textContent=e.message;}
@@ -306,10 +315,10 @@ function openLessonQuestions(lesson){lessonExerciseIds=lesson.question_ids||[];l
 async function drawLessonExercise(){
  const generation=++lessonExerciseGeneration,id=lessonExerciseIds[lessonExerciseIndex],root=$('lessonQuestionContent');root.replaceChildren(el('p','Carregando questão...'));
  $('lessonQuestionCount').textContent=(lessonExerciseIndex+1)+' de '+lessonExerciseIds.length;$('lessonQuestionPrevious').disabled=lessonExerciseIndex===0;$('lessonQuestionNext').disabled=lessonExerciseIndex===lessonExerciseIds.length-1;
- try{let q=lessonExerciseCache.get(id);if(!q){q=(await api('bank/question/'+id)).question;if(generation!==lessonExerciseGeneration)return;lessonExerciseCache.set(id,q);}if(generation!==lessonExerciseGeneration)return;
+ try{let q=lessonExerciseCache.get(id);if(!q){q=(await api('bank/question/'+id+'?fresh=true')).question;if(generation!==lessonExerciseGeneration)return;lessonExerciseCache.set(id,q);}if(generation!==lessonExerciseGeneration)return;
  root.replaceChildren();root.append(el('p',[q.subject,q.topic,q.board,q.year].filter(Boolean).join(' / ')));const statement=el('div');statement.className='lesson-exercise-statement';inline(statement,q.statement);root.append(statement);
  const answers=el('div');answers.className='lesson-exercise-answers';const feedback=el('div');feedback.className='lesson-exercise-feedback';
- function showResult(result){for(const button of answers.querySelectorAll('button')){button.disabled=true;button.classList.toggle('is-correct',button.dataset.choice===result.correct);button.classList.toggle('is-wrong',button.dataset.choice===result.choice&&!result.isCorrect);}feedback.replaceChildren(el('strong',result.correct?(result.isCorrect?'Resposta correta.':'Resposta incorreta.')+' Gabarito: '+result.correct:'Resposta registrada.'));if(result.commentary){const explanation=el('div');renderBlocks(explanation,{content:result.commentary});feedback.append(explanation);}}
+ function showResult(result){for(const button of answers.querySelectorAll('button')){button.disabled=true;button.classList.toggle('is-correct',button.dataset.choice===result.correct);button.classList.toggle('is-wrong',button.dataset.choice===result.choice&&!result.isCorrect);}feedback.replaceChildren(el('strong',result.correct?(result.isCorrect?'Resposta correta.':'Resposta incorreta.')+' Gabarito: '+result.correct:'Resposta registrada.'));if(result.commentary){const toggle=el('button','Exibir comentário');toggle.type='button';toggle.className='btn btn-soft';toggle.setAttribute('aria-expanded','false');const explanation=el('div');explanation.id='lesson-question-commentary';explanation.hidden=true;toggle.setAttribute('aria-controls',explanation.id);renderBlocks(explanation,{content:result.commentary});toggle.onclick=()=>{explanation.hidden=!explanation.hidden;toggle.textContent=explanation.hidden?'Exibir comentário':'Fechar comentário';toggle.setAttribute('aria-expanded',String(!explanation.hidden));};feedback.append(el('p'),toggle,explanation);}}
  for(const alt of q.alternatives||[]){const button=el('button',alt.letter+' — '+alt.text);button.type='button';button.className='btn btn-outline';button.dataset.choice=alt.letter;button.onclick=async()=>{for(const b of answers.querySelectorAll('button'))b.disabled=true;feedback.textContent='Salvando resposta...';try{const result=await api('bank/answer','POST',{id,choice:alt.letter});q.lastAttempt={choice:alt.letter,isCorrect:result.isCorrect};q.correct=result.correct;q.commentary=result.commentary;if(generation===lessonExerciseGeneration)showResult(result);}catch(e){if(generation!==lessonExerciseGeneration)return;feedback.textContent=e.message;for(const b of answers.querySelectorAll('button'))b.disabled=false;}};answers.append(button);}
  root.append(answers,feedback);if(q.lastAttempt)showResult({...q.lastAttempt,correct:q.correct,commentary:q.commentary});
  }catch(e){if(generation===lessonExerciseGeneration){root.replaceChildren(el('p','Esta questão está indisponível. '+e.message));const retry=el('button','Tentar novamente');retry.className='btn btn-soft';retry.type='button';retry.onclick=drawLessonExercise;root.append(retry);}}
@@ -322,3 +331,25 @@ $('lessonBankSearch').onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();findL
 $('lessonQuestionPrevious').onclick=()=>{if(lessonExerciseIndex>0){lessonExerciseIndex--;drawLessonExercise();}};
 $('lessonQuestionNext').onclick=()=>{if(lessonExerciseIndex<lessonExerciseIds.length-1){lessonExerciseIndex++;drawLessonExercise();}};
 $('lessonTop').onclick=()=>window.scrollTo({top:0,behavior:window.matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth'});
+
+// Adiciona o resultado completo da busca, incluindo todas as páginas.
+async function addAllLessonBankQuestions(){
+ const button=$('lessonBankAddAll');if(button.disabled)return;button.disabled=true;
+ const filters=lessonQuestionFilters();
+ const additions=new Map();const originalSelection=selectedLessonQuestions;
+ try{for(let page=1;page<=1000;page++){
+  $('lessonBankStatus').textContent='Reunindo questões do filtro · página '+page+'...';filters.set('page',String(page));
+  const data=await api('bank/questions?'+filters);
+  if(originalSelection!==selectedLessonQuestions)return;
+  for(const q of data.items)if(!selectedLessonQuestions.has(q.id))additions.set(q.id,[q.subject,q.topic,q.board,q.statement||q.preview].filter(Boolean).join(' · '));
+  if(selectedLessonQuestions.size+additions.size>200)throw Error('O filtro ultrapassa o limite de 200 questões por aula. Refine por disciplina, assunto ou banca. Nenhuma questão foi adicionada por esta operação.');
+  if(!data.hasMore)break;
+  if(page===1000)throw Error('Busca muito ampla. Refine o filtro antes de adicionar todas.');
+ }
+ for(const [id,label] of additions)selectedLessonQuestions.set(id,label);
+ dirty=true;drawSelectedLessonQuestions();
+ await findLessonBankQuestions(lessonBankPage);
+ $('lessonBankStatus').textContent=additions.size+' questões adicionadas. Clique em Salvar aula para gravar.';
+ }catch(e){$('lessonBankStatus').textContent=e.message;}finally{button.disabled=false;}
+}
+$('lessonBankAddAll').onclick=addAllLessonBankQuestions;

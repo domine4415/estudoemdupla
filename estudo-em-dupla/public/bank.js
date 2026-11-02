@@ -53,8 +53,19 @@ function elt(name,cls,txt){const e=document.createElement(name);if(cls)e.classNa
 function withAsync(button,task){return async()=>{if(button.disabled)return;button.disabled=true;try{await task();}catch(e){notify(e.message,true);}finally{button.disabled=false;}};}
 function showAdmin(open){$('statsPane').classList.add('hidden');$('studyPane').classList.toggle('hidden',open);$('adminPane').classList.toggle('hidden',!open);$('adminToggle').textContent=open?'↩ Resolver questões':'⚙ Gerenciar questões';if(open){loadDrafts();loadDeleteFilters();}else loadList();}
 async function loadFacets(){try{filters=await api('bank/facets');fillDropdown('filterSubject',filters.subjects,'Todas as disciplinas');fillDropdown('filterBoard',filters.boards,'Todas as bancas');fillDropdown('filterYear',filters.years.map(String),'Todos os anos');fillTopics();}catch(e){notify('Filtros indisponíveis: '+e.message,true);}}
-function fillDropdown(id,values,prompt){const select=$(id),old=select.value;select.replaceChildren();addOption(select,'',prompt);for(const v of values||[])addOption(select,String(v),String(v));if([...select.options].some(o=>o.value===old))select.value=old;}
-function fillTopics(){const subject=$('filterSubject').value;const topic=$('filterTopic');topic.disabled=!subject;if(!subject){topic.replaceChildren(new Option('Escolha uma disciplina primeiro',''));return;}const topics=[...new Set((filters.pairs||[]).filter(p=>p.subject===subject).map(p=>p.topic))].sort((a,b)=>a.localeCompare(b,'pt-BR'));fillDropdown('filterTopic',topics,'Todos os tópicos');}
+function bankFilterValues(id){const select=$(id);return select.multiple?[...select.selectedOptions].map(o=>o.value).filter(Boolean):[select.value].filter(Boolean);}
+function syncBankMulti(id){
+ const select=$(id);if(!select.multiple)return;
+ let box=document.getElementById(id+'Choices');
+ if(!box){box=document.createElement('div');box.id=id+'Choices';box.className='bank-multi';select.hidden=true;select.after(box);}
+ box.replaceChildren();const search=document.createElement('input');search.type='search';search.placeholder='Pesquisar opções';search.setAttribute('aria-label','Pesquisar '+select.dataset.bankMulti);search.disabled=select.disabled;box.append(search);
+ const hint=document.createElement('small');hint.textContent=select.disabled?'Escolha uma disciplina primeiro':'Nenhuma marcada = todas';box.append(hint);
+ const list=document.createElement('div');list.className='bank-multi-list';box.append(list);
+ for(const option of select.options){if(!option.value)continue;const label=document.createElement('label'),check=document.createElement('input');check.type='checkbox';check.checked=option.selected;check.disabled=select.disabled;check.onchange=()=>{option.selected=check.checked;select.dispatchEvent(new Event('change',{bubbles:true}));};label.append(check,document.createTextNode(option.textContent));list.append(label);}
+ search.oninput=()=>{const normalize=v=>v.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();for(const label of list.children)label.hidden=!normalize(label.textContent).includes(normalize(search.value));};
+}
+function fillDropdown(id,values,prompt){const select=$(id),old=bankFilterValues(id);select.replaceChildren();if(!select.multiple)addOption(select,'',prompt);for(const v of values||[])addOption(select,String(v),String(v));for(const option of select.options)option.selected=old.includes(option.value);syncBankMulti(id);}
+function fillTopics(){const subjects=bankFilterValues('filterSubject'),topic=$('filterTopic');topic.disabled=!subjects.length;const topics=[...new Set((filters.pairs||[]).filter(p=>subjects.includes(p.subject)).map(p=>p.topic))].sort((a,b)=>a.localeCompare(b,'pt-BR'));fillDropdown('filterTopic',topics,'Todos os tópicos');}
 async function loadProgress(){try{const p=await api('bank/progress');$('statAnswered').textContent=p.answered??0;$('statCorrect').textContent=p.correct??0;$('statWrong').textContent=p.wrong??0;if(p.warnings?.length)notify(p.warnings.join(' '),true);}catch(e){notify('Não foi possível recuperar seu desempenho: '+e.message,true);}}
 let filterGeneration=0, responseCache=new Map(), requestGeneration=0;
 function renderCommentary(value){
@@ -78,6 +89,13 @@ function renderCommentary(value){
   }
   return root;
 }
+function collapsibleBankCommentary(text){
+ const wrapper=elt('div','bank-commentary-toggle');
+ const button=elt('button','btn btn-soft','Exibir comentário');button.type='button';button.setAttribute('aria-expanded','false');
+ const comment=renderCommentary(text);comment.hidden=true;
+ button.onclick=()=>{comment.hidden=!comment.hidden;button.textContent=comment.hidden?'Exibir comentário':'Fechar comentário';button.setAttribute('aria-expanded',String(!comment.hidden));};
+ wrapper.append(button,comment);return wrapper;
+}
 function renderInlineQuestion(r){
  const card=elt('article','inline-question');card.dataset.questionId=r.id;
  const header=elt('div','inline-header');header.append(elt('span','eyebrow',`${r.subject} / ${r.topic}`),elt('span','pill',r.type==='true_false'?'CERTO OU ERRADO':'MÚLTIPLA ESCOLHA'));
@@ -91,7 +109,7 @@ function renderInlineQuestion(r){
  if(prior){banner.textContent=resolved?'✓ Você respondeu esta questão nesta filtragem.':'↺ Você já respondeu esta questão anteriormente. Pode responder de novo nesta filtragem.';banner.classList.add('visible');}
  function displayAnswer(result){
    opts.querySelectorAll('button').forEach(b=>{b.disabled=true;if(b.dataset.choice===result.correct)b.classList.add('correct');else if(b.dataset.choice===result.choice)b.classList.add('wrong');});
-   feedback.replaceChildren(elt('strong','',result.isCorrect?'✓ Você acertou!':'✕ Você errou.'),elt('div','',`Sua resposta: ${result.choice} • Gabarito: ${result.correct}`),renderCommentary(result.commentary||'Esta questão não possui comentário explicativo.'));
+   feedback.replaceChildren(elt('strong','',result.isCorrect?'✓ Você acertou!':'✕ Você errou.'),elt('div','',`Sua resposta: ${result.choice} • Gabarito: ${result.correct}`),collapsibleBankCommentary(result.commentary||'Esta questão não possui comentário explicativo.'));
    feedback.classList.remove('hidden');feedback.classList.toggle('wrong',!result.isCorrect);
    banner.textContent='✓ Respondida nesta filtragem.';
  }
@@ -111,7 +129,7 @@ function renderInlineQuestion(r){
 async function loadList(){
   const token=++requestGeneration;
   const q=new URLSearchParams({page:String(page)});
-  for(const [key,id] of [['subject','filterSubject'],['topic','filterTopic'],['board','filterBoard'],['year','filterYear'],['search','filterSearch'],['status','filterStatus'],['type','filterType']]){const value=$(id).value.trim();if(value)q.set(key,value);}
+  for(const [key,id] of [['subject','filterSubject'],['topic','filterTopic'],['board','filterBoard'],['year','filterYear'],['search','filterSearch'],['status','filterStatus'],['type','filterType']]){for(const value of bankFilterValues(id))if(value.trim())q.append(key,value.trim());}
   if($('filterExcludeOutdated').checked)q.set('excludeOutdated','true');if($('filterOnlyOriginal').checked)q.set('onlyOriginal','true');
   $('listMessage').textContent='Carregando questões...';$('questionCards').setAttribute('aria-busy','true');
   try{
@@ -140,7 +158,7 @@ function showFeedback({choice,correct,isCorrect,commentary},wasOld=false){
   const headline=elt('strong','',isCorrect?'✓ Resposta correta!':'✕ Resposta incorreta');
   const explanation=elt('div','',`Você marcou ${choice}. Gabarito: ${correct}.`);
   f.append(headline,explanation);
-  const comment=renderCommentary(commentary||'Esta questão ainda não possui comentário explicativo.');
+  const comment=collapsibleBankCommentary(commentary||'Esta questão ainda não possui comentário explicativo.');
   f.append(comment);f.classList.remove('hidden');
   $('repeatQuestion').classList.remove('hidden');
   for(const b of $('bankOptions').querySelectorAll('button')){
@@ -390,9 +408,9 @@ async function boot(){
   $('mobileMenu').onclick=()=>{const open=$('sideNav').classList.toggle('open');$('menuShade').hidden=!open;$('mobileMenu').setAttribute('aria-expanded',String(open));};
   $('menuShade').onclick=()=>{$('sideNav').classList.remove('open');$('menuShade').hidden=true;$('mobileMenu').setAttribute('aria-expanded','false');};$('statsBack').onclick=()=>{$('statsPane').classList.add('hidden');$('studyPane').classList.remove('hidden');loadList();};
   $('filterExcludeOutdated').onchange=applyFreshFilter;$('filterOnlyOriginal').onchange=applyFreshFilter;$('applyFilter').onclick=()=>{applyFreshFilter();$('bankFilters').open=false;};$('filterSearch').onkeydown=e=>{if(e.key==='Enter')applyFreshFilter();};
-  $('filterSubject').onchange=()=>{$('filterTopic').value='';fillTopics();applyFreshFilter();};
+  $('filterSubject').onchange=()=>{for(const o of $('filterTopic').options)o.selected=false;fillTopics();applyFreshFilter();};
   for(const id of ['filterTopic','filterBoard','filterYear','filterStatus','filterType'])$(id).onchange=applyFreshFilter;
-  $('clearFilter').onclick=()=>{$('filterExcludeOutdated').checked=false;$('filterOnlyOriginal').checked=false;for(const id of ['filterSearch','filterSubject','filterTopic','filterBoard','filterYear','filterStatus','filterType'])$(id).value='';fillTopics();applyFreshFilter();};
+  $('clearFilter').onclick=()=>{$('filterExcludeOutdated').checked=false;$('filterOnlyOriginal').checked=false;for(const id of ['filterSearch','filterSubject','filterTopic','filterBoard','filterYear','filterStatus','filterType']){const control=$(id);control.value='';if(control.multiple){for(const o of control.options)o.selected=false;syncBankMulti(id);}}fillTopics();applyFreshFilter();};
   $('previousPage').onclick=()=>{if(page>1){page--;loadList();document.querySelector('.bank-results')?.scrollIntoView({behavior:'smooth',block:'start'});}};
   $('nextPage').onclick=()=>{if(hasMore){page++;loadList();document.querySelector('.bank-results')?.scrollIntoView({behavior:'smooth',block:'start'});}};
   $('repeatQuestion').onclick=resetAttempt;
