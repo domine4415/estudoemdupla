@@ -41,3 +41,5 @@
 .highlight-tools{position:fixed;top:auto;bottom:20px;left:50%;transform:translateX(-50%);width:max-content;max-width:calc(100vw - 24px);justify-content:center}
 #highlightStatus:empty{display:none}
 @media(max-width:600px){.highlight-tools{bottom:12px;padding:10px;gap:6px}.highlight-tools button{font-size:12px;padding:8px}}
+
+.theory-filters{grid-template-columns:1fr auto}.theory-filters>[hidden]{display:none}.theory-folder{border-top:3px solid #7ecb96}.theory-folder>span{color:#a8bdcf;font-size:13px}#theoryBreadcrumbs{gap:8px}

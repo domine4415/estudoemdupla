@@ -34,7 +34,7 @@ module.exports=function({databaseRequest,parseJson,send,err,isAdmin,storageEnabl
       }catch(e){throw Object.assign(new Error('Não foi possível acessar seus grifos. Confira a conexão e execute TEORIA_SQL.sql atualizado no Supabase.'),{status:503});}
     }
     if(req.method==='GET'&&!op){
-      const params=new URLSearchParams({select:'id,title,subject,topic,published,updated_at',order:'subject,topic,title,id',limit:'1000'});
+      const params=new URLSearchParams({select:'id,title,subject,topic,subtopic,published,updated_at',order:'subject,topic,title,id',limit:'1000'});
       if(!admin)params.set('published','eq.true');
       const items=[];
       for(let offset=0;;offset+=1000){params.set('offset',String(offset));const rows=await (await query(params)).json();items.push(...rows);if(rows.length<1000)break;}
@@ -61,7 +61,7 @@ module.exports=function({databaseRequest,parseJson,send,err,isAdmin,storageEnabl
         size+=value.length;images[key]=value;
       }
       if(size>4*1024*1024)return err(res,413,'As imagens desta aula excedem 4 MB. Divida o conteúdo em mais aulas.');
-      const row={title,subject,topic,content,images,published:body.published===true,updated_at:new Date().toISOString()};
+      const row={title,subject,topic,subtopic:text(body.subtopic,180),content,images,published:body.published===true,updated_at:new Date().toISOString()};
       const params=new URLSearchParams({select:'id'});if(body.id)params.set('id','eq.'+body.id);
       const rows=await (await query(params,{method:body.id?'PATCH':'POST',headers:{Prefer:'return=representation'},body:JSON.stringify(row)})).json();
       if(!rows.length)return err(res,404,'Aula não encontrada.');

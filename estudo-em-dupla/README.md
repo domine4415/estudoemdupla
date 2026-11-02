@@ -94,3 +94,8 @@ Os modelos opcionais incluem quadros de resumo, mapas com blocos verdes/vermelho
 ### Grifos dos usuários
 
 Execute novamente `TEORIA_SQL.sql` atualizado para criar `policial_lesson_highlights`. Publique `server.js`, `theory-api.js` e os arquivos atualizados de `public/`, incluindo `theory-highlights.js`. Na leitura da aula, o usuário seleciona o texto e escolhe amarelo, verde ou azul; para apagar, seleciona o trecho e usa Remover grifo. O salvamento no Supabase é automático e vinculado à conta e à aula. Os grifos podem ser recuperados em outros dispositivos. O servidor sempre usa o usuário autenticado; não aceita outro identificador de conta enviado pelo navegador. Se o texto da aula mudar, grifos cuja posição não corresponde mais ao trecho original não são exibidos.
+
+
+### Organização da Central de Teoria
+
+A entrada mostra disciplinas; cada disciplina abre seus tópicos. Dentro de um tópico aparecem os subtópicos e as aulas cadastradas sem subtópico. O campo Subtópico é opcional no editor. Exemplo: Língua Portuguesa → Sintaxe → Sujeito → Tipos de sujeito. As aulas existentes ficam diretamente nos tópicos até serem reclassificadas. Execute novamente TEORIA_SQL.sql para adicionar a coluna subtopic e publique theory-api.js e os arquivos atualizados da pasta public.

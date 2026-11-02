@@ -27,3 +27,6 @@ create table if not exists public.policial_lesson_highlights (
 alter table public.policial_lesson_highlights enable row level security;
 revoke all on public.policial_lesson_highlights from anon,authenticated;
 grant select,insert,update,delete on public.policial_lesson_highlights to service_role;
+
+-- Hierarquia opcional das aulas, preservando os registros existentes.
+alter table public.policial_lessons add column if not exists subtopic text not null default '';
