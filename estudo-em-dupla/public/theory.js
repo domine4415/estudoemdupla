@@ -61,7 +61,12 @@ function renderBlocks(target,lesson,depth=0){
     const picture=s.match(/^!\[([^\]]*)\]\((imagem-[a-z0-9-]+|https:\/\/[^\s)]+)\)$/);
     if(picture){const src=picture[2].startsWith('https://')?picture[2]:lesson.images?.[picture[2]];if(typeof src==='string'&&(/^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/]+=*$/.test(src)||validImageUrl(src))){const figure=el('figure'),img=el('img');img.src=src;img.alt=picture[1];img.loading='lazy';img.referrerPolicy='no-referrer';figure.append(img);if(picture[1])figure.append(el('figcaption',picture[1]));target.append(figure);}else target.append(el('p','[Imagem indisponível]'));list=null;continue;}
     const heading=s.match(/^(#{1,4})\s+(.+)$/);
-    if(heading){target.append(inline(el('h'+Math.min(heading[1].length+1,4)),heading[2]));list=null;continue;}
+    if(heading){
+      const node=inline(el('h'+Math.min(heading[1].length+1,4)),heading[2]);
+      // O sumário usa apenas seções numeradas explicitamente marcadas com # ou ##.
+      if(depth===0&&heading[1].length<=2&&/^\d+(?:\.\d+)*(?:[.)])?\s+\S/.test(heading[2].replace(/\*\*|__/g,'').trim()))node.setAttribute('data-toc-section','true');
+      target.append(node);list=null;continue;
+    }
     const numbered=numberedTopic(s);
     if(numbered){target.append(inline(el('h'+numbered.level),s));list=null;continue;}
     if(/^(-{3,}|\*{3,})$/.test(s)){target.append(el('hr'));list=null;continue;}
@@ -99,7 +104,7 @@ function cards(){
 async function load(){lessons=(await api('theory')).items;options('subject',lessons.map(l=>l.subject),'Todas as disciplinas');topics();cards();for(const [id,key] of [['subjectOptions','subject'],['topicOptions','topic'],['subtopicOptions','subtopic']]){$(id).replaceChildren();for(const value of new Set(lessons.map(l=>l[key]).filter(Boolean))){const option=el('option');option.value=value;$(id).append(option);}}}
 function pane(id){for(const name of ['library','reader','editor'])$(name).classList.toggle('hidden',name!==id);}
 function tocSections(root){
-  return [...root.querySelectorAll('h2,h3,h4')].filter(node=>{
+  return [...root.querySelectorAll('[data-toc-section="true"]')].filter(node=>{
     // Quadros, listas e exemplos não são seções da aula.
     return node.textContent.trim()&&!node.closest('.study-block,li,table,blockquote,figure');
   });
@@ -229,10 +234,11 @@ $('content').addEventListener('paste',async event=>{
   let source=plain.trim();const fence=source.match(/^```(?:html|markdown|md|text)?\s*\n([\s\S]*?)\n```$/i);if(fence)source=fence[1];
   const rawHtml=/^\s*(?:<!doctype html|<(?:html|article|section|div|table|h[1-6]|p)[\s>])/i.test(source);
   const customFrames=/^:::(?:quadro|mapa|verde|vermelho|azul|amarelo|imagens)\b/m.test(source);
-  if(!rawHtml&&(!html||customFrames)&&!fence)return;
+  const explicitMarkdown=/^#{1,2}\s+\S/m.test(source);
+  if(!rawHtml&&(!html||customFrames||explicitMarkdown)&&!fence)return;
   event.preventDefault();
   try{
-    const priorImages={...images};const result=rawHtml||(!customFrames&&html&&!fence)?convertPastedHtml(rawHtml?source:html):{content:source};
+    const priorImages={...images};const result=rawHtml||(!customFrames&&!explicitMarkdown&&html&&!fence)?convertPastedHtml(rawHtml?source:html):{content:source};
     if($('content').value.length-($('content').selectionEnd-$('content').selectionStart)+result.content.length+4>150000){images=priorImages;throw Error('O texto excede o limite de 150 mil caracteres por aula.');}
     insertContent(result.content);$('editorStatus').textContent='Conteúdo colado e formatado automaticamente. Confira a prévia.'+(result.externalImages?' Imagens por link dependem da disponibilidade no site de origem.':'')+(result.missingImages?' Algumas imagens não vieram na cópia; você pode copiar a imagem e colar diretamente neste campo.':'');
   }catch(e){$('editorStatus').textContent='Não foi possível converter: '+e.message;}
