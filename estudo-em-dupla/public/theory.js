@@ -18,10 +18,8 @@ function renderPaper(target,lesson){
 }
 function numberedTopic(value){
   const text=value.replace(/\*\*|__/g,'').trim();
-  const match=text.match(/^(\d+(?:\.\d+)*)(?:[.)])?\s+(.+)$/);
-  if(!match||text.length>180)return null;
-  const title=match[2],uppercase=/[A-ZÀ-Ý]/.test(title)&&title===title.toLocaleUpperCase('pt-BR');
-  if(!uppercase&&(!match[1].includes('.')||title.length>100||/[.!?;:]$/.test(title)))return null;
+  const match=text.match(/^(\d+(?:\.\d+)*)\.\s+(.+)$/);
+  if(!match)return null;
   return {level:match[1].includes('.')?3:2};
 }
 function renderBlocks(target,lesson,depth=0){
@@ -63,12 +61,11 @@ function renderBlocks(target,lesson,depth=0){
     const heading=s.match(/^(#{1,4})\s+(.+)$/);
     if(heading){
       const node=inline(el('h'+Math.min(heading[1].length+1,4)),heading[2]);
-      // O sumário usa apenas seções numeradas explicitamente marcadas com # ou ##.
-      if(depth===0&&heading[1].length<=2&&/^\d+(?:\.\d+)*(?:[.)])?\s+\S/.test(heading[2].replace(/\*\*|__/g,'').trim()))node.setAttribute('data-toc-section','true');
+      if(depth===0&&numberedTopic(heading[2]))node.setAttribute('data-toc-section','true');
       target.append(node);list=null;continue;
     }
     const numbered=numberedTopic(s);
-    if(numbered){target.append(inline(el('h'+numbered.level),s));list=null;continue;}
+    if(numbered){const node=inline(el('h'+numbered.level),s);if(depth===0)node.setAttribute('data-toc-section','true');target.append(node);list=null;continue;}
     if(/^(-{3,}|\*{3,})$/.test(s)){target.append(el('hr'));list=null;continue;}
     if(s.startsWith('>')){target.append(inline(el('blockquote'),s.replace(/^>\s?/,'')));list=null;continue;}
     const bullet=s.match(/^(?:[-*]\s+|\d+[.)]\s+)(.+)$/);
@@ -193,7 +190,7 @@ function convertPastedHtml(html,fromPreview=false){
     if(tag==='code')return '`'+node.textContent+'`';
     if(tag==='li'){
       if(node.children.length===1&&/^H[1-6]$/.test(node.children[0].tagName))return '\n\n'+children().trim()+'\n\n';
-      const marker=node.parentElement?.tagName==='OL'?([...node.parentElement.children].indexOf(node)+1)+'. ':'- ';
+      const marker=node.parentElement?.tagName==='OL'?(Number(node.getAttribute('value')||Number(node.parentElement.getAttribute('start')||1)+[...node.parentElement.children].indexOf(node)))+'. ':'- ';
       return '\n'+marker+children().trim()+'\n';
     }
     if(tag==='ul'||tag==='ol')return '\n\n'+[...node.children].map(n=>convert(n,depth+1).trim()).join('\n')+'\n\n';
@@ -234,7 +231,7 @@ $('content').addEventListener('paste',async event=>{
   let source=plain.trim();const fence=source.match(/^```(?:html|markdown|md|text)?\s*\n([\s\S]*?)\n```$/i);if(fence)source=fence[1];
   const rawHtml=/^\s*(?:<!doctype html|<(?:html|article|section|div|table|h[1-6]|p)[\s>])/i.test(source);
   const customFrames=/^:::(?:quadro|mapa|verde|vermelho|azul|amarelo|imagens)\b/m.test(source);
-  const explicitMarkdown=/^#{1,2}\s+\S/m.test(source);
+  const explicitMarkdown=/^(?:#{1,2}\s+\S|\d+(?:\.\d+)*\.\s+\S)/m.test(source);
   if(!rawHtml&&(!html||customFrames||explicitMarkdown)&&!fence)return;
   event.preventDefault();
   try{
@@ -245,7 +242,7 @@ $('content').addEventListener('paste',async event=>{
 });
 for(const button of document.querySelectorAll('[data-frame]'))button.onclick=()=>insertContent(frameTemplates[button.dataset.frame]);
 $('importLessonText').onchange=async()=>{const input=$('importLessonText');try{const file=input.files[0];if(!file)return;if(file.size>600000)throw Error('O arquivo deve ter até 600 KB.');let text=await file.text();text=text.replace(/^\uFEFF/,'').trim();const fence=text.match(/^```(?:markdown|md|text)?\s*\n([\s\S]*?)\n```$/i);if(fence)text=fence[1];if(text.length>150000)throw Error('O conteúdo deve ter até 150 mil caracteres.');if($('content').value.trim()&&!confirm('Substituir o conteúdo atual pelo texto importado?'))return;$('content').value=text;dirty=true;preview();$('editorStatus').textContent='Texto importado. Confira a prévia; adicione as imagens usando o upload.';}catch(e){$('editorStatus').textContent=e.message;}finally{input.value='';}};
-$('copyLessonPrompt').onclick=async()=>{const text='Crie uma aula esquematizada para concursos policiais sobre [ASSUNTO], na disciplina [DISCIPLINA]. Entregue apenas Markdown, sem HTML e sem envolver a aula inteira em cercas de código. Marque APENAS as seções reais da aula com # e os subtópicos com ##. Exemplo: # 1. Introdução e ## 1.1. Conceito. O site gera automaticamente o sumário navegável desses títulos: não escreva um sumário separado nem repita a lista de seções no conteúdo. Para exemplos, fórmulas, listas e rótulos internos dos quadros, use texto comum ou **negrito**, nunca # ou ##. Use listas e tabelas Markdown quando necessário. Para quadros visuais, use exatamente os delimitadores abaixo, cada um em sua própria linha. Cada bloco aberto deve terminar com ::: em uma linha separada. Os blocos coloridos podem ficar dentro de um quadro ou mapa. No mapa, o primeiro bloco azul é a ideia central e ocupa a largura toda; os demais ficam lado a lado. Não crie novas variações dos delimitadores.\n\n'+frameTemplates.resumo+'\n\n'+frameTemplates.mapa+'\n\nInclua regras, exemplos, exceções e pegadinhas explicadas. Use os quadros apenas onde ajudarem o estudo. Imagens serão inseridas depois por upload; não invente links ou códigos de imagens.';try{await navigator.clipboard.writeText(text);$('editorStatus').textContent='Instruções copiadas. Cole no ChatGPT e substitua [ASSUNTO] e [DISCIPLINA].';}catch{$('editorStatus').textContent='Não foi possível copiar automaticamente. O formato dos quadros está nos modelos e na ajuda abaixo.';}};
+$('copyLessonPrompt').onclick=async()=>{const text='Crie uma aula esquematizada para concursos policiais sobre [ASSUNTO], na disciplina [DISCIPLINA]. Entregue apenas Markdown, sem HTML e sem envolver a aula inteira em cercas de código. Numere as seções e subtópicos sempre terminando a numeração com ponto: 1. Introdução, 2. Regras gerais, 2.1. Conceito. Escreva cada título em sua própria linha. Não é necessário usar #. O site gera o sumário automaticamente por essa numeração. Não escreva um sumário separado. Use essa numeração somente para títulos que devem entrar no sumário; exemplos e fórmulas devem usar texto comum, negrito ou listas com hífen. Para quadros visuais, use exatamente os delimitadores abaixo, cada um em sua própria linha. Cada bloco aberto deve terminar com ::: em uma linha separada. Os blocos coloridos podem ficar dentro de um quadro ou mapa. No mapa, o primeiro bloco azul é a ideia central e ocupa a largura toda; os demais ficam lado a lado. Não crie novas variações dos delimitadores.\n\n'+frameTemplates.resumo+'\n\n'+frameTemplates.mapa+'\n\nInclua regras, exemplos, exceções e pegadinhas explicadas. Use os quadros apenas onde ajudarem o estudo. Imagens serão inseridas depois por upload; não invente links ou códigos de imagens.';try{await navigator.clipboard.writeText(text);$('editorStatus').textContent='Instruções copiadas. Cole no ChatGPT e substitua [ASSUNTO] e [DISCIPLINA].';}catch{$('editorStatus').textContent='Não foi possível copiar automaticamente. O formato dos quadros está nos modelos e na ajuda abaixo.';}};
 $('lessonForm').oninput=()=>{dirty=true;clearTimeout(previewTimer);previewTimer=setTimeout(preview,350);};
 $('subject').onchange=()=>navigateTheory($('subject').value);$('topic').onchange=()=>navigateTheory($('subject').value,$('topic').value);$('search').oninput=cards;$('lessonFilters').onsubmit=e=>e.preventDefault();
 $('clearFilters').onclick=()=>navigateTheory();
