@@ -375,3 +375,31 @@ $('lessonBankAddAll').onclick=addAllLessonBankQuestions;
 
 document.addEventListener('click',event=>{for(const details of document.querySelectorAll('.lesson-filter-dropdown[open]'))if(!details.contains(event.target))details.open=false;});
 document.addEventListener('keydown',event=>{if(event.key==='Escape')for(const details of document.querySelectorAll('.lesson-filter-dropdown[open]'))details.open=false;});
+
+// Mantém a seleção ao usar a barra de ferramentas da prévia.
+let previewSelection=null;
+document.addEventListener('selectionchange',()=>{
+ const selection=window.getSelection();if(!selection?.rangeCount)return;
+ const range=selection.getRangeAt(0),paper=$('preview');
+ if(!range.collapsed&&paper.contains(range.startContainer)&&paper.contains(range.endContainer))previewSelection=range.cloneRange();
+});
+for(const button of $('theoryFormatToolbar').querySelectorAll('[data-format]')){
+ button.addEventListener('mousedown',event=>event.preventDefault());
+ button.onclick=()=>{
+  if(!admin||!previewSelection||!$('preview').contains(previewSelection.commonAncestorContainer))return;
+  const selection=window.getSelection();selection.removeAllRanges();selection.addRange(previewSelection);
+  const ancestor=previewSelection.startContainer.nodeType===1?previewSelection.startContainer:previewSelection.startContainer.parentElement;
+  const editable=ancestor.closest('[contenteditable="true"]');if(!editable)return;
+  const format=button.dataset.format;
+  if(format==='bold'||format==='underline')document.execCommand(format,false,null);
+  else if(format==='clear'){document.execCommand('removeFormat',false,null);}
+  else if(format==='example'){
+   const block=editable.closest('p,blockquote,li');
+   if(!block||block.closest('.study-exemplo'))return;
+   const box=el('section');box.className='study-block study-exemplo';const title=el('div','Exemplo');title.className='study-block-title';block.before(box);box.append(title,block);enablePreviewEditing();
+  }else{
+   const range=selection.getRangeAt(0);const wrapper=el(format==='mark'?'mark':'code');wrapper.append(range.extractContents());range.insertNode(wrapper);range.selectNodeContents(wrapper);selection.removeAllRanges();selection.addRange(range);
+  }
+  syncPreview({currentTarget:editable});if(selection.rangeCount)previewSelection=selection.getRangeAt(0).cloneRange();
+ };
+}

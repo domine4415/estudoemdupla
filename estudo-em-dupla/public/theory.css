@@ -78,3 +78,4 @@
 
 .lesson-alternative-row{grid-template-columns:minmax(0,1fr)}
 .lesson-paper .study-exemplo{background:#eef5fb;border:1px solid #bad1e2;border-left:4px solid #4d88b6;border-radius:12px;padding:20px 24px;margin:22px 0;break-inside:avoid;color:#253e51}.study-exemplo>.study-block-title{font:700 12px/1.5 system-ui;letter-spacing:1px;text-transform:uppercase;color:#326287;margin-bottom:12px}.study-exemplo>p:last-child{margin-bottom:0}
+.theory-format-toolbar{position:sticky;top:65px;z-index:35;display:flex;align-items:center;flex-wrap:wrap;gap:8px;padding:12px 16px;background:#122333;border:1px solid #406052;border-radius:12px;box-shadow:0 5px 18px #0003}.theory-format-toolbar .btn{padding:9px 13px}.theory-format-toolbar>span{font-size:12px;color:#a6b7c9}.theory-format-toolbar>strong{color:#a2efb5;margin-right:6px}@media(max-width:600px){.theory-format-toolbar{top:58px;padding:8px;gap:5px}.theory-format-toolbar>span{display:none}}
