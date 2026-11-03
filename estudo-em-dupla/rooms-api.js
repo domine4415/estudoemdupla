@@ -5,6 +5,7 @@ const scrypt=promisify(crypto.scrypt);
 const {topicFilter,normalizeTopic}=require('./topic');
 const {shuffle,prepareQuestion}=require('./room-questions');
 const selectRoomQuestions=require('./room-bank-filter');
+const voiceIce=require('./voice-ice')();
 const IDLE=30*60*1000;
 const text=(v,n=180)=>typeof v==='string'?v.trim().slice(0,n):'';
 module.exports=function({rooms,databaseRequest,storageEnabled,parseJson,send,err,normalizeQuestion,recordAnswer=async()=>{},publicName=async()=>null,publicMembers=async()=>[]}){
@@ -67,7 +68,7 @@ module.exports=function({rooms,databaseRequest,storageEnabled,parseJson,send,err
       if(action==='events'&&req.method==='GET'){
         res.writeHead(200,{'Content-Type':'text/event-stream; charset=utf-8','Cache-Control':'no-cache, no-transform','Connection':'keep-alive','X-Accel-Buffering':'no'});res.roomUserId=user.id;r.clients.add(res);res.write('event: refresh\ndata: {}\n\n');const timer=setInterval(()=>{try{res.write(': heartbeat\n\n');}catch{}},20000);req.on('close',()=>{clearInterval(timer);r.clients.delete(res);});return;
       }
-      if(action==='voice-config'&&req.method==='GET'){let iceServers=[{urls:'stun:stun.l.google.com:19302'}];try{if(process.env.VOICE_ICE_SERVERS)iceServers=JSON.parse(process.env.VOICE_ICE_SERVERS);}catch{return err(res,503,'Áudio não configurado.');}return send(res,200,{iceServers,participantId:user.id});}
+      if(action==='voice-config'&&req.method==='GET'){try{return send(res,200,{iceServers:await voiceIce(user.id),participantId:user.id});}catch(e){return err(res,503,e.message);}}
       if(req.method!=='POST')return err(res,404,'Rota não encontrada.');const body=await parseJson(req);
       if(action==='chat'){
         const content=typeof body.text==='string'?body.text.trim():'';
