@@ -46,6 +46,19 @@ module.exports=function({rooms,databaseRequest,storageEnabled,parseJson,send,err
     }
     const match=url.pathname.match(/^\/api\/room\/([A-Z0-9]{6})\/([a-z-]+)$/i);if(!match)return err(res,404,'Rota não encontrada.');
     const code=match[1].toUpperCase(),action=match[2];
+    // Leituras e obtenção de TURN não bloqueiam entradas/alterações da sala.
+    if(req.method==='GET'&&['state','restore','voice-config','events','chat'].includes(action)){
+      const r=await load(code);if(!r)return err(res,404,'Sala não encontrada.');
+      const m=member(r,user);if(!m)return err(res,403,'Entre na sala para acessar.');
+      if(action==='state'){const snapshot={...r,members:r.members.map(m=>({...m})),questions:[...r.questions],votes:JSON.parse(JSON.stringify(r.votes))};return send(res,200,await state(snapshot,user));}
+      if(r.isOpen===false)return err(res,409,'Sala encerrada por inatividade ou pelo dono.');
+      if(action==='restore')return send(res,200,{code,token:m.token,role:r.hostUserId===user.id?'host':'guest'});
+      if(action==='voice-config'){try{return send(res,200,{iceServers:await voiceIce(user.id),participantId:user.id});}catch(e){return err(res,503,e.message);}}
+      if(action==='events'){
+        res.writeHead(200,{'Content-Type':'text/event-stream; charset=utf-8','Cache-Control':'no-cache, no-transform','Connection':'keep-alive','X-Accel-Buffering':'no'});res.roomUserId=user.id;r.clients.add(res);res.write('event: refresh\ndata: {}\n\n');const timer=setInterval(()=>{try{res.write(': heartbeat\n\n');}catch{}},20000);req.on('close',()=>{clearInterval(timer);r.clients.delete(res);});return;
+      }
+      const messages=(r.messages||[]).slice(-100),profiles=await publicMembers([...new Set(messages.map(x=>x.userId))]);return send(res,200,{messages:messages.map(msg=>{const profile=profiles.find(p=>p.user_id===msg.userId);return {...msg,name:profile?.display_name||msg.name,avatar:profile?.avatar_data||''};})});
+    }
     // Serializa alterações e entradas para não exceder a capacidade em acessos simultâneos.
     const previous=locks.get(code)||Promise.resolve();let unlock;const lock=new Promise(resolve=>unlock=resolve);const queued=previous.then(()=>lock);locks.set(code,queued);await previous;
     try{

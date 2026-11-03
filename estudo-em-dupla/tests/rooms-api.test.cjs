@@ -62,3 +62,8 @@ test('chat fica restrito aos participantes, persiste texto e envia evento em tem
 
 test('sinalização de tela preserva mídia, sessão e destino e exige participante',async()=>{const {call,rooms}=fixture();const created=await call('room','owner',{maxParticipants:3});const code=created.data.code;await call(`room/${code}/join`,'p1',{});const events=[];rooms.get(code).clients.add({roomUserId:'p1',write:value=>events.push(value)});const result=await call(`room/${code}/voice`,'owner',{signal:{type:'ready',session:'screen-session',media:'screen',sharing:true,to:'p1'}});assert.equal(result.status,200);assert.match(events[0],/"media":"screen"/);assert.match(events[0],/"sharing":true/);assert.equal((await call(`room/${code}/voice`,'stranger',{signal:{type:'ready',session:'x',media:'screen'}})).status,403);});
 
+
+test('consulta lenta de perfis não bloqueia continuar ou entrar na sala',async()=>{
+ let release;const pending=new Promise(resolve=>release=resolve);let reading=false;const {call}=fixture({publicMembers:async()=>{reading=true;return pending;}});const created=await call('room','owner',{maxParticipants:3});const code=created.data.code;const state=call(`room/${code}/state`);while(!reading)await new Promise(setImmediate);
+ try{const restore=await Promise.race([call(`room/${code}/restore`),new Promise((_,reject)=>setTimeout(()=>reject(Error('Restore bloqueado pela consulta de perfis')),200))]);assert.equal(restore.status,200);assert.equal((await call(`room/${code}/join`,'p1',{})).status,200);}finally{release([]);await state;}
+});

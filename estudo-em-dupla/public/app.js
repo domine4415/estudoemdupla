@@ -53,7 +53,7 @@ function networkError(e){
 async function request(endpoint,method='GET',body){
   const url='/api/room/'+encodeURIComponent(code)+endpoint;
   let response;
-  try{response=await fetch(url,{method,headers:body?{'Content-Type':'application/json'}:{},body:body?JSON.stringify(body):undefined});}
+  try{response=await fetch(url,{method,headers:body?{'Content-Type':'application/json'}:{},body:body?JSON.stringify(body):undefined,signal:AbortSignal.timeout(20000)});}
   catch(e){throw networkError(e);}
   const contentType=response.headers.get('content-type')||'';
   if(!contentType.includes('application/json'))throw Error('O endereço aberto não está respondendo como o servidor do aplicativo. '+connectionHint());
@@ -68,7 +68,8 @@ function connect(){if(es)es.close();es=new EventSource('/api/room/'+encodeURICom
 let ongoing=null,refreshQueued=false;
 async function refresh(){
   if(ongoing){refreshQueued=true;return ongoing;}
-  ongoing=request('/state?token='+encodeURIComponent(token)).then(v=>{view=v;render(v);}).catch(e=>alertUser(e.message,true)).finally(()=>{ongoing=null;if(refreshQueued){refreshQueued=false;refresh();}});
+  if(!code||!token)return;const requestedCode=code,requestedToken=token;
+  ongoing=request('/state?token='+encodeURIComponent(token)).then(v=>{if(code!==requestedCode||token!==requestedToken)return;if(v.code!==requestedCode||!Array.isArray(v.participants)||!v.participants.length||!Number.isInteger(v.questionsCount))throw Error('A sala retornou dados incompletos. Tentando atualizar sem apagar a tela.');render(v);view=v;}).catch(e=>alertUser(e.message,true)).finally(()=>{ongoing=null;if(refreshQueued){refreshQueued=false;refresh();}});
   return ongoing;
 }
 async function command(action,data={}){try{await request('/'+action,'POST',{...credentials(),...data});await refresh();}catch(e){alertUser(e.message,true);}}
@@ -337,7 +338,7 @@ function roomCard(room){
     action.disabled=true;
     try{
       if(room.mine){
-        const result=await fetch('/api/room/'+encodeURIComponent(room.code)+'/restore',{cache:'no-store'});
+        const result=await fetch('/api/room/'+encodeURIComponent(room.code)+'/restore',{cache:'no-store',signal:AbortSignal.timeout(20000)});
         const data=await result.json();if(!result.ok)throw Error(data.error||'Não foi possível abrir esta sala.');
         setSession(data.code,data.token,data.role);
       }else{
@@ -424,7 +425,7 @@ async function initializeApp(){
     const session=localStorage.getItem('dupla_'+c);
     if(session) {try{const s=JSON.parse(session);if(s.token){setSession(c,s.token,s.role);return;}}catch{localStorage.removeItem('dupla_'+c);}}
     // Novo navegador, mesmo usuário: recuperar sala de forma autenticada.
-    try{const r=await fetch('/api/room/'+encodeURIComponent(c)+'/restore',{cache:'no-store'});
+    try{const r=await fetch('/api/room/'+encodeURIComponent(c)+'/restore',{cache:'no-store',signal:AbortSignal.timeout(20000)});
       if(r.ok){const v=await r.json();setSession(c,v.token,v.role);return;}
     }catch{}
   }
