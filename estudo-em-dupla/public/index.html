@@ -5,11 +5,11 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <meta name="theme-color" content="#0a1020" />
 <title>ESTUDO POLICIAL • Preparação para carreiras policiais</title>
-<link rel="stylesheet" href="/styles.css?v=20261102-controles-compactos" />
+<link rel="stylesheet" href="/styles.css?v=20261105-edital-home" />
 <script src="/room-voice.js?v=20261102-diagnostico" defer></script><script src="/room-screen.js?v=20261102-controles-compactos" defer></script>
 <link rel="stylesheet" href="/room-chat.css"><script src="/room-chat.js" defer></script>
-<script src="/app.js?v=20261102-sala-estavel" defer></script>
-<link rel="stylesheet" href="/navigation.css"><script src="/navigation.js?v=20261102-controles-compactos" defer></script><script src="/presence.js" defer></script><link rel="stylesheet" href="/searchable-select.css?v=20261102-global"><script src="/searchable-select.js?v=20261102-global" defer></script><script src="/page-motion.js" defer></script><script src="/room-navigation.js?v=20261102-controles-compactos" defer></script></head>
+<script src="/app.js?v=20261102-confirmar-resposta" defer></script>
+<link rel="stylesheet" href="/navigation.css"><script src="/navigation.js?v=20261105-edital" defer></script><script src="/presence.js" defer></script><link rel="stylesheet" href="/searchable-select.css?v=20261102-global"><script src="/searchable-select.js?v=20261102-global" defer></script><script src="/page-motion.js" defer></script><script src="/room-navigation.js?v=20261102-controles-compactos" defer></script></head>
 <body>
 <header class="topbar">
   <div class="brand"><span class="brand-mark"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 4 6v6c0 5 8 9 8 9s8-4 8-9V6z"/><path d="m8.5 12 2.3 2.3 4.7-4.8"/></svg></span><span>ESTUDO<span class="brand-secondary"> POLICIAL</span></span></div>
@@ -53,6 +53,7 @@
       <a href="/banco#estatisticas" class="home-action"><span class="action-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M7 17v-5m5 5V7m5 10v-7"/></svg></span><span class="action-copy"><strong>Estatísticas</strong><small>Acompanhe acertos e evolução</small></span><span class="action-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M5 12h14m-6-6 6 6-6 6"/></svg></span></a>
       <a href="/?view=salas#salas-abertas" class="home-action"><span class="action-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3"/><path d="M3 19v-2a6 6 0 0 1 12 0v2H3zM17 5a3 3 0 0 1 0 6m1 3a5 5 0 0 1 3 5"/></svg></span><span class="action-copy"><strong>Salas ao vivo</strong><small>Estude com outros participantes</small></span><span class="action-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M5 12h14m-6-6 6 6-6 6"/></svg></span></a>
       <button id="openCreatePanel" type="button" class="home-action hidden" aria-controls="createRoomPanel" aria-expanded="false"><span class="action-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="3" width="18" height="18" rx="4"/><path d="M12 7v10M7 12h10"/></svg></span><span class="action-copy"><strong>Criar sala</strong><small>Disponível para qualquer conta</small></span><span class="action-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M5 12h14m-6-6 6 6-6 6"/></svg></span></button>
+      <a href="/edital" class="home-action home-action-edital"><span class="action-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3" width="16" height="18" rx="3"/><path d="m7 8 1 1 2-2m2 1h5m-10 6 1 1 2-2m2 1h5"/></svg></span><span class="action-copy"><strong>Edital</strong><small>Marque o que estudou e acompanhe seu progresso</small></span><span class="action-arrow">→</span></a>
     </section>
     <section id="createRoomPanel" class="home-create-panel hidden" aria-label="Criar sala">
       <div class="create-title"><div><div class="eyebrow">CRIE SUA SALA</div><h2>Criar sala de estudos</h2></div><button id="closeCreatePanel" class="btn btn-soft btn-small" type="button">Fechar</button></div>
@@ -114,7 +115,7 @@
         <div class="question-meta" id="questionMeta"></div>
         <h2 class="question-heading">Leia e marque a alternativa</h2>
         <div class="statement" id="questionStatement"></div>
-        <div id="answerOptions" class="answer-options"></div>
+        <div id="answerOptions" class="answer-options"></div><div class="room-confirm-actions"><button id="confirmRoomAnswer" type="button" class="btn btn-primary" disabled>Confirmar resposta</button><span id="roomAnswerStatus" role="status"></span></div>
         <div id="incompleteNotice" class="notice warning hidden">A extração não trouxe alternativas suficientes. O criador da sala pode editar esta questão antes de responder.</div>
         <div id="feedback" class="feedback hidden"></div>
         <div class="host-only host-tools">

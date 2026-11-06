@@ -348,11 +348,13 @@ communityApi=require('./community-api')({databaseRequest,storageEnabled,parseJso
 async function handleApi(req,res,url,user){return roomsApi.handle(req,res,url,user);}
 setInterval(()=>roomsApi.sweep().catch(e=>console.error('Falha ao encerrar salas:',e.message)),30000).unref();
 const bankApi=createBankApi({databaseRequest,parseJson,send,err,isAdmin,storageEnabled});
+const editalApi=require('./edital-api')({databaseRequest,parseJson,send,err,isAdmin,storageEnabled});
 const theoryApi=createTheoryApi({databaseRequest,parseJson,send,err,isAdmin,storageEnabled});
 const files={'/banco':'bank.html','/banco.html':'bank.html','/bank.js':'bank.js','/bank.css':'bank.css','/':'index.html','/index.html':'index.html','/app.js':'app.js','/styles.css':'styles.css'};
 files['/math-support.js']='math-support.js';files['/page-motion.js']='page-motion.js';
 files['/date-picker.js']='date-picker.js';files['/date-picker.css']='date-picker.css';
 const mime={'.html':'text/html; charset=utf-8','.css':'text/css; charset=utf-8','.js':'application/javascript; charset=utf-8'};
+Object.assign(files,{'/edital':'edital.html','/edital.js':'edital.js','/edital.css':'edital.css'});
 Object.assign(files,{'/teoria':'theory.html','/theory.js':'theory.js','/theory.css':'theory.css'});
 files['/theory-highlights.js']='theory-highlights.js';
 files['/navigation.js']='navigation.js';files['/navigation.css']='navigation.css';
@@ -370,6 +372,7 @@ const server=http.createServer(async(req,res)=>{
       const user=await currentUser(req,res);
       if(!user){err(res,401,'Entre na sua conta para acessar as salas.');return;}
       if(url.pathname.startsWith('/api/bank/'))return await bankApi.handle(req,res,url,user);
+      if(url.pathname==='/api/edital'||url.pathname.startsWith('/api/edital/'))return await editalApi.handle(req,res,url,user);
       if(url.pathname==='/api/theory'||url.pathname.startsWith('/api/theory/'))return await theoryApi.handle(req,res,url,user);
       if(url.pathname==='/api/community'||url.pathname.startsWith('/api/community/'))return await communityApi.handle(req,res,url,user);
       return await handleApi(req,res,url,user);

@@ -63,7 +63,7 @@ async function request(endpoint,method='GET',body){
 }
 function credentials(){return role==='host'?{hostToken:token}:{token};}
 function roomLink(){return location.origin+'/?room='+encodeURIComponent(code);}
-function setSession(c,t,r){roomArrivalMembers=null;roomArrivalCode='';if(!signedIn){showAuthMessage('Entre na conta antes de acessar a sala.',true);return;}code=c;token=t;role=r;localStorage.setItem('dupla_'+code,JSON.stringify({token,role}));localStorage.setItem('dupla_last_room',code);history.replaceState(null,'','/?room='+code);$('landing').classList.add('hidden');$('workspace').classList.remove('hidden');$('topRoom').classList.remove('hidden');$('roomQuickNav').classList.remove('hidden');$('roomCode').textContent=code;document.body.classList.toggle('guest',role==='guest');$('roomTitle').textContent=role==='host'?'Sala '+code:'Sala '+code;window.roomScreen?.setup({send:signal=>request('/voice','POST',{...credentials(),signal}),config:()=>request('/voice-config?token='+encodeURIComponent(token))});window.roomVoice?.setup({role:r,send:signal=>request('/voice','POST',{...credentials(),signal}),config:()=>request('/voice-config?token='+encodeURIComponent(token))});window.roomChat?.setup({self:()=>view?.myUserId,get:()=>request('/chat'),send:text=>request('/chat','POST',{...credentials(),text})});connect();refresh();}
+function setSession(c,t,r){roomAnswerDrafts.clear();roomArrivalMembers=null;roomArrivalCode='';if(!signedIn){showAuthMessage('Entre na conta antes de acessar a sala.',true);return;}code=c;token=t;role=r;localStorage.setItem('dupla_'+code,JSON.stringify({token,role}));localStorage.setItem('dupla_last_room',code);history.replaceState(null,'','/?room='+code);$('landing').classList.add('hidden');$('workspace').classList.remove('hidden');$('topRoom').classList.remove('hidden');$('roomQuickNav').classList.remove('hidden');$('roomCode').textContent=code;document.body.classList.toggle('guest',role==='guest');$('roomTitle').textContent=role==='host'?'Sala '+code:'Sala '+code;window.roomScreen?.setup({send:signal=>request('/voice','POST',{...credentials(),signal}),config:()=>request('/voice-config?token='+encodeURIComponent(token))});window.roomVoice?.setup({role:r,send:signal=>request('/voice','POST',{...credentials(),signal}),config:()=>request('/voice-config?token='+encodeURIComponent(token))});window.roomChat?.setup({self:()=>view?.myUserId,get:()=>request('/chat'),send:text=>request('/chat','POST',{...credentials(),text})});connect();refresh();}
 function connect(){if(es)es.close();es=new EventSource('/api/room/'+encodeURIComponent(code)+'/events?token='+encodeURIComponent(token));es.addEventListener('refresh',()=>refresh());es.addEventListener('expelled',()=>leaveRoom('Você foi expulso da sala pelo dono.'));es.addEventListener('chat',event=>{try{window.roomChat?.receive(JSON.parse(event.data));}catch{}});es.addEventListener('voice',event=>{try{const signal=JSON.parse(event.data);if(signal.media==='screen'||signal.session==='*')window.roomScreen?.receive(signal);if(signal.media!=='screen')window.roomVoice?.receive(signal);}catch{}});es.onerror=()=>{};}
 let ongoing=null,refreshQueued=false;
 async function refresh(){
@@ -199,6 +199,14 @@ function notifyRoomArrivals(q){
  const now=roomArrivalAudio.currentTime;
  for(const [frequency,delay] of [[660,0],[880,.14]]){const tone=roomArrivalAudio.createOscillator(),gain=roomArrivalAudio.createGain();tone.type='sine';tone.frequency.value=frequency;gain.gain.setValueAtTime(0,now+delay);gain.gain.linearRampToValueAtTime(.065,now+delay+.018);gain.gain.exponentialRampToValueAtTime(.001,now+delay+.2);tone.connect(gain);gain.connect(roomArrivalAudio.destination);tone.start(now+delay);tone.stop(now+delay+.23);tone.onended=()=>{tone.disconnect();gain.disconnect();};}
 }
+const roomAnswerDrafts=new Map();let roomAnswerSending=false;
+function roomAnswerKey(q){return [code,q.index,q.question?.id||q.question?.statement].join(':');}
+function syncRoomConfirm(q){const choice=roomAnswerDrafts.get(roomAnswerKey(q));$('confirmRoomAnswer').hidden=!!q.revealed;$('confirmRoomAnswer').disabled=roomAnswerSending||!choice||choice===q.myAnswer||readElimination(`${code}:${role}:${q.index}:${q.question?.id||q.question?.statement}`).has(choice);$('roomAnswerStatus').textContent=q.revealed?'':roomAnswerSending?'Enviando resposta...':choice&&choice!==q.myAnswer?'Seleção ainda não enviada.':q.myAnswer?'Resposta confirmada.':'';}
+$('confirmRoomAnswer').onclick=async()=>{
+ const q=view;if(!q?.question||q.revealed||roomAnswerSending)return;const choice=roomAnswerDrafts.get(roomAnswerKey(q));if(!choice||choice===q.myAnswer||readElimination(`${code}:${role}:${q.index}:${q.question.id||q.question.statement}`).has(choice))return;
+ roomAnswerSending=true;syncRoomConfirm(q);
+ try{await request('/answer','POST',{...credentials(),choice,index:q.index});await refresh();}catch(e){alertUser(e.message,true);}finally{roomAnswerSending=false;if(view?.question)syncRoomConfirm(view);}
+};
 function render(q){
   if(q.isOpen===false){leaveRoom('Esta sala foi encerrada pelo administrador.');return;}
   notifyRoomArrivals(q);
@@ -222,12 +230,13 @@ function render(q){
   const parent=$('answerOptions');parent.replaceChildren();
   for(const opt of data.alternatives){
     const b=document.createElement('button');b.type='button';b.className='answer';
-    const selected=q.myAnswer===opt.letter;
+    const selected=(roomAnswerDrafts.get(roomAnswerKey(q))||q.myAnswer)===opt.letter;
     if(selected)b.classList.add('selected');
     if(q.revealed&&data.correct){if(opt.letter===data.correct)b.classList.add('correct');else if(selected)b.classList.add('wrong');}
     b.append(div('letter',opt.letter),div('answer-label',opt.text));
-    b.disabled=q.revealed;enableElimination(b,()=>command('answer',{choice:opt.letter,index:q.index}),`${code}:${role}:${q.index}:${data.id||data.statement}`,opt.letter);parent.append(b);
+    b.disabled=q.revealed;enableElimination(b,()=>{if(roomAnswerSending)return;roomAnswerDrafts.set(roomAnswerKey(q),opt.letter);for(const option of parent.querySelectorAll('button')){option.classList.toggle('selected',option===b);option.setAttribute('aria-pressed',String(option===b));}syncRoomConfirm(q);},`${code}:${role}:${q.index}:${data.id||data.statement}`,opt.letter);parent.append(b);
   }
+  syncRoomConfirm(q);
   $('incompleteNotice').classList.toggle('hidden',!data.needsReview);
   $('feedback').classList.toggle('hidden',!q.revealed);
   if(q.revealed){
@@ -307,6 +316,7 @@ async function saveEdit(e){e.preventDefault();
 }
 
 function leaveRoom(message=''){
+  roomAnswerDrafts.clear();
   roomArrivalMembers=null;roomArrivalCode='';
   window.roomBrowse?.close(false);
   window.roomScreen?.stop();window.roomVoice?.stop();window.roomChat?.stop();

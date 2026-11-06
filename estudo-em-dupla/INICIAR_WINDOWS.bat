@@ -8,5 +8,10 @@ if errorlevel 1 (
 )
 echo Iniciando servidor...
 echo Deixe esta janela aberta!
-node server.js --open
+if exist ".env" (
+  node --env-file=.env server.js --open
+) else (
+  echo Arquivo .env nao encontrado. Iniciando sem as configuracoes locais do Supabase.
+  node server.js --open
+)
 pause
